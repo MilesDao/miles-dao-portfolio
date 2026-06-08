@@ -12,6 +12,7 @@ export interface Project {
   tags: string[];
   link?: string;
   image?: string;
+  sortOrder?: number;
 }
 
 export interface SkillGroup {
@@ -28,6 +29,7 @@ export interface Blog {
   content: string;
   tags: string[];
   image?: string;
+  sortOrder?: number;
 }
 
 export interface MediaItem {
@@ -38,3 +40,31 @@ export interface MediaItem {
   type: string;
   uploadedAt: string;
 }
+
+export interface EducationExperience {
+  id: string;
+  category: string;
+  location: string;
+  period: string;
+  items: string[];
+  sortOrder: number;
+}
+
+export interface EditorBlock {
+  id: string;
+  type: 'paragraph' | 'h1' | 'h2' | 'bullet' | 'todo' | 'quote' | 'code' | 'callout' | 'toggle' | 'math' | 'table' | 'synced' | 'toc' | 'image';
+  content: string;
+  properties?: {
+    checked?: boolean;
+    language?: string;
+    emoji?: string;
+    isOpen?: boolean;
+    color?: string;
+    bgColor?: string;
+    syncedId?: string;
+    tableData?: string[][];
+    imageUrl?: string;
+    imageWidth?: number;
+  };
+}
+

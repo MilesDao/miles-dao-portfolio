@@ -9,23 +9,29 @@ import Barcode from "./components/Barcode";
 import CommandPalette from "./components/CommandPalette";
 import PortraitWithKeypoints from "./components/PortraitWithKeypoints";
 import AdminModal from "./components/AdminModal";
-import { getProjects, getBlogs } from "./firebase";
-import { Project, Blog } from "./types";
+import BlogEditor from "./components/BlogEditor";
+import { getProjects, getBlogs, getCV, getEducationExperience, saveBlog } from "./firebase";
+import { Project, Blog, EducationExperience } from "./types";
 
-const TECH_STACKS = [
-  {
-    category: "FRONTEND // SPEC",
-    items: ["React (Version 19)", "TypeScript ESM", "Tailwind CSS v4", "Motion (Animate)", "D3.js / Recharts"]
-  },
-  {
-    category: "BACKEND // ENGINE",
-    items: ["Node.js Context", "Express Core", "RESTful Routing", "WASM Compilation", "Drizzle ORM"]
-  },
-  {
-    category: "INFRASTRUCTURE // DATA",
-    items: ["Cloud Run containers", "PostgreSQL", "Firebase DB / Firestore", "Vite Server Bundler", "Esbuild compiler"]
+const base64ToBlobUrl = (base64Data: string): string => {
+  const sliceSize = 512;
+  const [header, base64] = base64Data.split(',');
+  const mimeType = header.match(/:(.*?);/)?.[1] || 'application/octet-stream';
+  const byteCharacters = atob(base64);
+  const byteArrays = [];
+  for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+    const slice = byteCharacters.slice(offset, offset + sliceSize);
+    const byteNumbers = new Array(slice.length);
+    for (let i = 0; i < slice.length; i++) {
+      byteNumbers[i] = slice.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    byteArrays.push(byteArray);
   }
-];
+  const blob = new Blob(byteArrays, { type: mimeType });
+  return URL.createObjectURL(blob);
+};
+
 
 export default function App() {
   const [activeModal, setActiveModal] = useState<string | null>(null);
@@ -34,6 +40,10 @@ export default function App() {
   const [scrolled, setScrolled] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [educationList, setEducationList] = useState<EducationExperience[]>([]);
+  const [editingBlog, setEditingBlog] = useState<Blog | null>(null);
+  const [cvName, setCvName] = useState("");
+  const [cvBlobUrl, setCvBlobUrl] = useState("");
   const [revealedSections, setRevealedSections] = useState<Record<string, boolean>>({
     "about-section": false,
     "projects-section": false,
@@ -51,10 +61,29 @@ export default function App() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const projs = await getProjects();
-        const blgs = await getBlogs();
+        const [projs, blgs, cv, edu] = await Promise.all([
+          getProjects(),
+          getBlogs(),
+          getCV(),
+          getEducationExperience()
+        ]);
         setProjects(projs);
         setBlogs(blgs);
+        
+        // Sort education list chronologically (sortOrder ascending: Dai Mo first, CMC last)
+        const sortedEdu = [...edu].sort((a, b) => a.sortOrder - b.sortOrder);
+        setEducationList(sortedEdu);
+
+        if (cv && cv.fileData) {
+          setCvName(cv.name);
+          try {
+            const blobUrl = base64ToBlobUrl(cv.fileData);
+            setCvBlobUrl(blobUrl);
+          } catch (e) {
+            console.error("Error generating CV blob URL:", e);
+            setCvBlobUrl(cv.fileData);
+          }
+        }
       } catch (err) {
         console.error("Error loading data:", err);
       }
@@ -421,8 +450,8 @@ export default function App() {
 
               {/* Two lines exactly 22 and 20 character length variables */}
               <div className="font-mono text-[10px] md:text-xs leading-normal text-neutral-600">
-                <p className="tracking-wide">ENGINEERED FOR MODERN.</p>
-                <p className="tracking-wide">DESIGNED TO INSPIRE.</p>
+                <p className="tracking-wide">YOU HAVE TO DO YOUR LIFE’S WORK</p>
+                <p className="tracking-wide">WITH INTENSITY AND COMMITMENT.</p>
               </div>
             </div>
 
@@ -445,9 +474,9 @@ export default function App() {
               {/* Left Side: Metadata and CTA Button */}
               <div id="hero-left-metadata" className="flex flex-col items-start text-left gap-6">
                 <div className="font-mono text-[11px] md:text-xs leading-relaxed text-neutral-700 space-y-0.5">
-                  <p className="tracking-wide">FULL STACK SOFTWARE CREATOR</p>
-                  <p className="tracking-wide text-neutral-500">BUILT FOR WEB.</p>
-                  <p className="tracking-wide text-neutral-500">READY FOR DEVS.</p>
+                  <p className="tracking-wide">AI ENGINEER INTERN</p>
+                  <p className="tracking-wide text-neutral-500 font-bold">BUILDING INTELLIGENT SYSTEMS</p>
+                  <p className="tracking-wide text-neutral-500">TURNING DATA INTO DECISIONS</p>
                 </div>
 
                 <button
@@ -456,7 +485,7 @@ export default function App() {
                   className="group relative flex items-center gap-10 bg-neutral-950 text-[#ebeae4] hover:bg-[#ebeae4] hover:text-neutral-950 border-2 border-neutral-950 px-6 py-3.5 rounded-sm font-mono text-xs font-bold transition-all duration-300 shadow-sm cursor-pointer overflow-hidden uppercase"
                 >
                   <span className="relative z-10 flex items-center gap-10">
-                    EXPLORE MD—26 <ArrowUpRight size={14} className="group-hover:rotate-45 transition-transform duration-300" />
+                    EXPLORE WORK <ArrowUpRight size={14} className="group-hover:rotate-45 transition-transform duration-300" />
                   </span>
                   <span className="absolute inset-x-0 bottom-0 top-full bg-[#ebeae4] group-hover:top-0 transition-all duration-300 z-0" />
                 </button>
@@ -492,7 +521,9 @@ export default function App() {
                     <span className="font-mono text-[9px] text-neutral-400 tracking-widest uppercase bg-neutral-200 px-1 py-0.5 rounded">
                       MILES DAO™
                     </span>
-                    <Barcode id="specs-horizontal-barcode" width={100} height={16} linesCount={36} />
+                    <a href="https://www.facebook.com/milesdao13" target="_blank" rel="noopener noreferrer" title="Facebook Profile" className="hover:opacity-85 transition-opacity block w-[200px] h-[26px]">
+                      <Barcode id="specs-horizontal-barcode" width={200} height={26} />
+                    </a>
                   </div>
                 </div>
               </div>
@@ -566,40 +597,62 @@ export default function App() {
                     <span className="w-1.5 h-1.5 rounded-full bg-neutral-950 group-hover:bg-neutral-100" />
                     <span>LINKEDIN PORT // @milesdao</span>
                   </a>
+                  {cvBlobUrl && (
+                    <a
+                      href={cvBlobUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between border border-neutral-900 px-4 py-3 bg-neutral-200/50 rounded hover:bg-neutral-950 hover:text-[#ebeae4] transition-all font-mono text-xs font-bold group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="w-1.5 h-1.5 rounded-full bg-neutral-950 group-hover:bg-neutral-100 animate-pulse" />
+                        <span>CV PORT // VIEW & DOWNLOAD</span>
+                      </div>
+                      <span className="text-[10px] uppercase font-black tracking-wider px-1.5 py-0.5 border border-neutral-900 group-hover:border-neutral-100 rounded">
+                        OPEN
+                      </span>
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Right side: Tech Specifications */}
-            <div className="md:col-span-7 space-y-6 text-left">
-              <h3 className={`fade-text font-mono text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-300 pb-2 mb-4 ${isAboutRevealed ? "opacity-100" : "opacity-0"}`}>
-                SYSTEM SPEC METADATA
-              </h3>
-
-              <div className="space-y-4">
-                {TECH_STACKS.map((stack, idx) => (
-                  <div
-                    key={idx}
-                    className={`stagger-card border border-neutral-350 rounded overflow-hidden bg-neutral-200/20 hover:border-neutral-950 transition-colors duration-300 shadow-sm ${isAboutRevealed ? "opacity-100" : "opacity-0"}`}
-                  >
-                    <div className="bg-neutral-950 text-[#ebeae4] px-4 py-2.5 font-mono text-[10px] tracking-wider uppercase font-bold flex justify-between items-center">
-                      <span>{stack.category}</span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                    </div>
-                    <div className="bg-neutral-50/70 p-4">
-                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {stack.items.map((item, idy) => (
-                          <li key={idy} className="flex items-center gap-2 font-mono text-xs text-neutral-700">
-                            <span className="w-1 h-1 bg-neutral-400 rounded-full" />
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+             {/* Right side: Education & Experience */}
+             <div className="md:col-span-7 space-y-6 text-left">
+               <h3 className={`fade-text font-mono text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-300 pb-2 mb-4 ${isAboutRevealed ? "opacity-100" : "opacity-0"}`}>
+                 EDUCATION & EXPERIENCE
+               </h3>
+ 
+               <div className="space-y-4">
+                 {educationList.map((entry, idx) => (
+                   <div
+                     key={entry.id || idx}
+                     className={`stagger-card border border-neutral-350 rounded overflow-hidden bg-neutral-200/20 hover:border-neutral-950 transition-colors duration-300 shadow-sm ${isAboutRevealed ? "opacity-100" : "opacity-0"}`}
+                   >
+                     <div className="bg-neutral-950 text-[#ebeae4] px-4 py-2.5 font-mono text-[10px] tracking-wider uppercase font-bold flex justify-between items-center">
+                       <span>{entry.category}</span>
+                       <span className="font-mono text-[9px] text-neutral-400 font-normal">{entry.period}</span>
+                     </div>
+                     <div className="bg-neutral-50/70 p-4 space-y-3">
+                       <div className="text-[10px] font-mono text-neutral-500 font-bold uppercase tracking-wider">
+                         LOCATION // {entry.location}
+                       </div>
+                       <ul className="space-y-1.5">
+                         {entry.items.map((item, idy) => (
+                           <li
+                             key={idy}
+                             className="flex items-start gap-2 font-mono text-xs text-neutral-700 leading-relaxed"
+                           >
+                             <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 mt-1 flex-shrink-0" />
+                             <span>{item}</span>
+                           </li>
+                         ))}
+                       </ul>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             </div>
           </div>
         </section>
 
@@ -821,7 +874,9 @@ export default function App() {
               </div>
 
               <div className={`fade-text hidden md:block ${isContactRevealed ? "opacity-100" : "opacity-0"}`}>
-                <Barcode id="contact-section-barcode" width={140} height={20} linesCount={45} />
+                <a href="https://www.facebook.com/milesdao13" target="_blank" rel="noopener noreferrer" title="Facebook Profile" className="hover:opacity-85 transition-opacity block w-[280px] h-[40px]">
+                  <Barcode id="contact-section-barcode" width={280} height={40} />
+                </a>
                 <p className="font-mono text-[9px] text-neutral-400 mt-1 uppercase">SECURE TRANSFER PORTAL 26</p>
               </div>
             </div>
@@ -980,8 +1035,10 @@ export default function App() {
         >
           {/* Vertical barcode block on bottom left */}
           <div className="flex items-end gap-4">
-            <div className="relative h-12 w-3 flex items-center justify-center overflow-hidden">
-              <Barcode id="footer-vertical-barcode" vertical width={48} height={12} linesCount={24} />
+            <div className="relative h-20 w-6 flex items-center justify-center overflow-hidden">
+              <a href="https://www.facebook.com/milesdao13" target="_blank" rel="noopener noreferrer" title="Facebook Profile" className="hover:opacity-85 transition-opacity block w-[24px] h-[80px]">
+                <Barcode id="footer-vertical-barcode" vertical width={80} height={24} />
+              </a>
             </div>
 
             <div className="flex flex-col text-left">
@@ -997,6 +1054,12 @@ export default function App() {
                 <a href="https://github.com/MilesDao" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-950 hover:underline">GHUB</a>
                 <span>/</span>
                 <a href="https://www.linkedin.com/in/milesdao/" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-950 hover:underline">LNKD</a>
+                {cvBlobUrl && (
+                  <>
+                    <span>/</span>
+                    <a href={cvBlobUrl} target="_blank" rel="noopener noreferrer" className="hover:text-neutral-950 hover:underline">CV</a>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -1076,8 +1139,121 @@ export default function App() {
                     <p className="font-mono text-sm font-bold text-neutral-700 leading-relaxed border-l-4 border-neutral-950 pl-4 py-2 bg-neutral-200/40 pr-4 rounded-r">
                       {selectedBlog.summary}
                     </p>
-                    <div className="text-neutral-800 text-sm md:text-base leading-relaxed whitespace-pre-line space-y-4 pt-6 border-t border-neutral-300">
-                      {selectedBlog.content}
+                    <div className="text-neutral-800 text-sm md:text-base leading-relaxed space-y-3 pt-6 border-t border-neutral-300">
+                      {(() => {
+                        // Parse stored JSON blocks and render them
+                        try {
+                          const raw = selectedBlog.content;
+                          if (!raw) return null;
+                          let blocks: any[] = [];
+                          if (raw.trim().startsWith("[")) {
+                            blocks = JSON.parse(raw);
+                          } else {
+                            // Fallback: render as plain text for legacy content
+                            return <p className="whitespace-pre-line">{raw}</p>;
+                          }
+                          return blocks.map((block: any, i: number) => {
+                            const key = block.id || `blk-${i}`;
+                            switch (block.type) {
+                              case "h1":
+                                return <h2 key={key} className="font-display font-black text-2xl text-neutral-950 uppercase tracking-tight mt-6 mb-2" dangerouslySetInnerHTML={{ __html: block.content }} />;
+                              case "h2":
+                                return <h3 key={key} className="font-mono font-bold text-lg text-neutral-900 uppercase mt-4 mb-1" dangerouslySetInnerHTML={{ __html: block.content }} />;
+                              case "bullet":
+                                return (
+                                  <div key={key} className="flex items-start gap-2.5 pl-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 mt-2 flex-shrink-0" />
+                                    <span dangerouslySetInnerHTML={{ __html: block.content }} />
+                                  </div>
+                                );
+                              case "todo":
+                                return (
+                                  <div key={key} className="flex items-center gap-2.5 pl-2 font-mono text-xs">
+                                    <input type="checkbox" checked={!!block.properties?.checked} readOnly className="w-3.5 h-3.5 rounded pointer-events-none" />
+                                    <span className={block.properties?.checked ? "line-through text-neutral-400" : ""} dangerouslySetInnerHTML={{ __html: block.content }} />
+                                  </div>
+                                );
+                              case "quote":
+                                return (
+                                  <blockquote key={key} className="border-l-4 border-neutral-950 pl-4 italic text-neutral-600 text-sm my-2" dangerouslySetInnerHTML={{ __html: block.content }} />
+                                );
+                              case "code":
+                                return (
+                                  <div key={key} className="bg-neutral-900 text-emerald-300 font-mono text-xs p-4 rounded my-2 overflow-x-auto">
+                                    {block.properties?.language && (
+                                      <div className="text-neutral-500 text-[10px] uppercase font-bold mb-2 pb-2 border-b border-neutral-800">{block.properties.language}</div>
+                                    )}
+                                    <pre className="whitespace-pre-wrap">{block.content}</pre>
+                                  </div>
+                                );
+                              case "callout":
+                                return (
+                                  <div key={key} className="bg-neutral-200/50 border border-neutral-300 rounded p-4 flex gap-3 my-2">
+                                    <span className="text-lg">{block.properties?.emoji || "💡"}</span>
+                                    <span dangerouslySetInnerHTML={{ __html: block.content }} />
+                                  </div>
+                                );
+                              case "toggle":
+                                return (
+                                  <details key={key} className="pl-1.5 my-1.5 group">
+                                    <summary className="font-bold text-sm cursor-pointer list-none flex items-center gap-1.5">
+                                      <span className="text-neutral-600 transition-transform group-open:rotate-90">▶</span>
+                                      <span dangerouslySetInnerHTML={{ __html: block.content }} />
+                                    </summary>
+                                    {block.properties?.bgColor && (
+                                      <div className="pl-8 border-l border-neutral-300 mt-2 py-1 text-sm text-neutral-500 whitespace-pre-line">{block.properties.bgColor}</div>
+                                    )}
+                                  </details>
+                                );
+                              case "math":
+                                return (
+                                  <div key={key} className="bg-neutral-200/30 border border-neutral-300 rounded p-4 my-2 text-center font-serif italic text-xl font-bold tracking-wide text-neutral-900">
+                                    {block.content || "E = mc²"}
+                                  </div>
+                                );
+                              case "table":
+                                if (block.properties?.tableData) {
+                                  return (
+                                    <div key={key} className="overflow-x-auto my-2">
+                                      <table className="border-collapse w-full font-mono text-xs">
+                                        <tbody>
+                                          {block.properties.tableData.map((row: string[], rIdx: number) => (
+                                            <tr key={rIdx} className={rIdx === 0 ? "bg-neutral-200/50 font-bold" : ""}>
+                                              {row.map((cell: string, cIdx: number) => (
+                                                <td key={cIdx} className="border border-neutral-400 p-2 min-w-[80px]">{cell}</td>
+                                              ))}
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              case "image":
+                                return block.properties?.imageUrl ? (
+                                  <figure key={key} className="my-3" style={{ width: `${block.properties?.imageWidth ?? 100}%`, margin: "0 auto" }}>
+                                    <img src={block.properties.imageUrl} alt={block.content || "Image"} className="w-full rounded border border-neutral-300 shadow-sm" />
+                                    {block.content && (
+                                      <figcaption className="text-center text-xs text-neutral-400 mt-2 italic">{block.content}</figcaption>
+                                    )}
+                                  </figure>
+                                ) : null;
+                              case "toc":
+                                return null; // TOC is editor-only
+                              case "synced":
+                                return <div key={key} className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: block.content }} />;
+                              default:
+                                // paragraph
+                                if (!block.content) return <div key={key} className="h-4" />; // empty paragraph = spacer
+                                return <p key={key} className="leading-relaxed" dangerouslySetInnerHTML={{ __html: block.content }} />;
+                            }
+                          });
+                        } catch {
+                          // If parsing fails, render as plain text
+                          return <p className="whitespace-pre-line">{selectedBlog.content}</p>;
+                        }
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -1109,7 +1285,50 @@ export default function App() {
             id="admin-modal-render"
             isOpen={true}
             onClose={() => setActiveModal(null)}
+            educationList={educationList}
+            onRefreshData={async () => {
+              try {
+                const edu = await getEducationExperience();
+                const sortedEdu = [...edu].sort((a, b) => a.sortOrder - b.sortOrder);
+                setEducationList(sortedEdu);
+              } catch (e) {
+                console.error("Error refreshing education data:", e);
+              }
+            }}
+            onEditBlog={(blog) => {
+              setActiveModal(null);
+              setEditingBlog(blog);
+            }}
           />
+        )}
+      </AnimatePresence>
+
+      {/* ==================== NOTION-STYLE BLOG EDITOR ==================== */}
+      <AnimatePresence>
+        {editingBlog && (
+          <motion.div
+            key="blog-editor-page"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="fixed inset-0 z-[60] bg-[#ebeae4] text-[#111111] overflow-y-auto"
+          >
+            <BlogEditor
+              blog={editingBlog}
+              onClose={() => setEditingBlog(null)}
+              onSave={async (updatedBlog) => {
+                try {
+                  await saveBlog(updatedBlog);
+                  const blgs = await getBlogs();
+                  const sortedBlogs = [...blgs].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+                  setBlogs(sortedBlogs);
+                } catch (e) {
+                  console.error("Error saving blog post:", e);
+                }
+              }}
+            />
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

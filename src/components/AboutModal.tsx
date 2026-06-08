@@ -1,29 +1,17 @@
 import { motion } from "motion/react";
 import { X, Cpu, GitCommit, ShieldCheck, Terminal } from "lucide-react";
-import { SkillGroup } from "../types";
+import { SkillGroup, EducationExperience } from "../types";
 
 interface AboutModalProps {
   id: string;
   isOpen: boolean;
   onClose: () => void;
+  cvBlobUrl?: string;
+  cvName?: string;
+  educationList?: EducationExperience[];
 }
 
-const TECH_STACKS: SkillGroup[] = [
-  {
-    category: "FRONTEND // SPEC",
-    items: ["React (Version 19)", "TypeScript ESM", "Tailwind CSS v4", "Motion (Animate)", "D3.js / Recharts"]
-  },
-  {
-    category: "BACKEND // ENGINE",
-    items: ["Node.js Context", "Express Core", "RESTful Routing", "WASM Compilation", "Drizzle ORM"]
-  },
-  {
-    category: "INFRASTRUCTURE // DATA",
-    items: ["Cloud Run containers", "PostgreSQL", "Firebase DB / Firestore", "Vite Server Bundler", "Esbuild compiler"]
-  }
-];
-
-export default function AboutModal({ id, isOpen, onClose }: AboutModalProps) {
+export default function AboutModal({ id, isOpen, onClose, cvBlobUrl, cvName, educationList = [] }: AboutModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -84,7 +72,7 @@ export default function AboutModal({ id, isOpen, onClose }: AboutModalProps) {
                   Focusing on structured lines, clear hierarchy, high-contrast layouts, and keeping zero fluff or unnecessary design bulk.
                 </p>
               </div>
-              
+
               <div className="border border-neutral-300 rounded p-4 bg-neutral-200/40">
                 <div className="flex items-center gap-2 mb-2 text-neutral-900">
                   <Cpu size={16} />
@@ -96,24 +84,27 @@ export default function AboutModal({ id, isOpen, onClose }: AboutModalProps) {
               </div>
             </div>
 
-            {/* Technical Specifications */}
+            {/* Education & Experience */}
             <div className="mt-8">
               <h3 className="font-mono text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-300 pb-2 mb-4">
-                SYSTEM SPEC METADATA
+                EDUCATION & EXPERIENCE
               </h3>
 
               <div className="space-y-6">
-                {TECH_STACKS.map((stack, idx) => (
-                  <div key={idx} className="border border-neutral-300 rounded overflow-hidden">
+                {educationList.map((entry, idx) => (
+                  <div key={entry.id || idx} className="border border-neutral-300 rounded overflow-hidden shadow-sm">
                     <div className="bg-neutral-950 text-[#ebeae4] px-4 py-2 font-mono text-[10px] tracking-wider uppercase font-bold flex justify-between items-center">
-                      <span>{stack.category}</span>
-                      <ShieldCheck size={12} className="text-green-400" />
+                      <span>{entry.category}</span>
+                      <span className="font-mono text-[9px] text-neutral-400 font-normal">{entry.period}</span>
                     </div>
-                    <div className="bg-neutral-50 p-4">
-                      <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {stack.items.map((item, idy) => (
-                          <li key={idy} className="flex items-center gap-2 font-mono text-xs text-neutral-700">
-                            <GitCommit size={10} className="text-neutral-400" />
+                    <div className="bg-neutral-50/70 p-4 space-y-3">
+                      <div className="text-[10px] font-mono text-neutral-500 font-bold uppercase tracking-wider text-left">
+                        LOCATION // {entry.location}
+                      </div>
+                      <ul className="space-y-1.5">
+                        {entry.items.map((item, idy) => (
+                          <li key={idy} className="flex items-start gap-2 font-mono text-xs text-neutral-700 leading-relaxed text-left">
+                            <GitCommit size={10} className="text-neutral-400 mt-1 flex-shrink-0" />
                             <span>{item}</span>
                           </li>
                         ))}
@@ -122,42 +113,53 @@ export default function AboutModal({ id, isOpen, onClose }: AboutModalProps) {
                   </div>
                 ))}
               </div>
-            {/* System Outbound Links / Profiles */}
-            <div className="mt-8 border-t border-neutral-300 pt-6">
-              <h3 className="font-mono text-xs font-bold text-neutral-400 uppercase tracking-widest mb-4">
-                SYSTEM OUTBOUND LINK PORTS
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <a
-                  href="mailto:trungdao131105@gmail.com"
-                  className="flex items-center gap-3 border border-neutral-900 px-4 py-3 bg-neutral-200/50 rounded hover:bg-neutral-950 hover:text-[#ebeae4] transition-all font-mono text-xs font-bold group justify-center sm:justify-start"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 group-hover:bg-neutral-100" />
-                  <span>EMAIL PORT // trungdao131105@gmail.com</span>
-                </a>
-                <a
-                  href="https://github.com/MilesDao"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 border border-neutral-900 px-4 py-3 bg-neutral-200/50 rounded hover:bg-neutral-950 hover:text-[#ebeae4] transition-all font-mono text-xs font-bold group justify-center sm:justify-start"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 group-hover:bg-neutral-100" />
-                  <span>GITHUB PORT // @MilesDao</span>
-                </a>
-                <a
-                  href="https://www.linkedin.com/in/milesdao/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 border border-neutral-900 px-4 py-3 bg-neutral-200/50 rounded hover:bg-neutral-950 hover:text-[#ebeae4] transition-all font-mono text-xs font-bold group justify-center sm:justify-start"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 group-hover:bg-neutral-100" />
-                  <span>LINKEDIN PORT // @milesdao</span>
-                </a>
+              {/* System Outbound Links / Profiles */}
+              <div className="mt-8 border-t border-neutral-300 pt-6">
+                <h3 className="font-mono text-xs font-bold text-neutral-400 uppercase tracking-widest mb-4">
+                  SYSTEM OUTBOUND LINK PORTS
+                </h3>
+                <div className={`grid grid-cols-1 gap-4 ${cvBlobUrl ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
+                  <a
+                    href="mailto:trungdao131105@gmail.com"
+                    className="flex items-center gap-3 border border-neutral-900 px-4 py-3 bg-neutral-200/50 rounded hover:bg-neutral-950 hover:text-[#ebeae4] transition-all font-mono text-xs font-bold group justify-center sm:justify-start"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 group-hover:bg-neutral-100" />
+                    <span>EMAIL PORT // trungdao131105@gmail.com</span>
+                  </a>
+                  <a
+                    href="https://github.com/MilesDao"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 border border-neutral-900 px-4 py-3 bg-neutral-200/50 rounded hover:bg-neutral-950 hover:text-[#ebeae4] transition-all font-mono text-xs font-bold group justify-center sm:justify-start"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 group-hover:bg-neutral-100" />
+                    <span>GITHUB PORT // @MilesDao</span>
+                  </a>
+                  <a
+                    href="https://www.linkedin.com/in/milesdao/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 border border-neutral-900 px-4 py-3 bg-neutral-200/50 rounded hover:bg-neutral-950 hover:text-[#ebeae4] transition-all font-mono text-xs font-bold group justify-center sm:justify-start"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 group-hover:bg-neutral-100" />
+                    <span>LINKEDIN PORT // @milesdao</span>
+                  </a>
+                  {cvBlobUrl && (
+                    <a
+                      href={cvBlobUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 border border-neutral-900 px-4 py-3 bg-neutral-200/50 rounded hover:bg-neutral-950 hover:text-[#ebeae4] transition-all font-mono text-xs font-bold group justify-center sm:justify-start"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 group-hover:bg-neutral-100 animate-pulse" />
+                      <span>CV PORT // VIEW & DOWNLOAD</span>
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
         {/* Footer */}
         <div className="mt-12 pt-6 border-t border-dashed border-neutral-400 flex justify-between items-center text-xs font-mono text-neutral-500">
