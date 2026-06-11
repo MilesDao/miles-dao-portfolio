@@ -86,6 +86,61 @@ const DEFAULT_PROJECTS: Project[] = [
     link: "https://spark.milesdao.com",
     image: "/assets/project_visual.png",
     sortOrder: 4
+  },
+  {
+    id: "proj-05",
+    title: "resume",
+    category: "GitHub Project",
+    year: "2026",
+    description: "",
+    tags: ["TypeScript"],
+    link: "https://github.com/MilesDao/resume",
+    image: "/assets/project_visual.png",
+    sortOrder: 5
+  },
+  {
+    id: "proj-06",
+    title: "MilesDao",
+    category: "GitHub Project",
+    year: "2026",
+    description: "Hello world!",
+    tags: [],
+    link: "https://github.com/MilesDao/MilesDao",
+    image: "/assets/project_visual.png",
+    sortOrder: 6
+  },
+  {
+    id: "proj-07",
+    title: "Face-Recognition-Attendance-System-KNN-SVM",
+    category: "GitHub Project",
+    year: "2026",
+    description: "",
+    tags: ["Jupyter Notebook"],
+    link: "https://github.com/MilesDao/Face-Recognition-Attendance-System-KNN-SVM",
+    image: "/assets/project_visual.png",
+    sortOrder: 7
+  },
+  {
+    id: "proj-08",
+    title: "Vietnam-traffic-signs-classification",
+    category: "GitHub Project",
+    year: "2026",
+    description: "",
+    tags: ["Python"],
+    link: "https://github.com/MilesDao/Vietnam-traffic-signs-classification",
+    image: "/assets/project_visual.png",
+    sortOrder: 8
+  },
+  {
+    id: "proj-09",
+    title: "U-pose-3d-sam3d",
+    category: "GitHub Project",
+    year: "2026",
+    description: "",
+    tags: ["Python"],
+    link: "https://github.com/MilesDao/U-pose-3d-sam3d",
+    image: "/assets/project_visual.png",
+    sortOrder: 9
   }
 ];
 

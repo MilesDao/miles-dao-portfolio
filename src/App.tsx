@@ -48,14 +48,7 @@ export default function App() {
     "about-section": false,
     "projects-section": false,
     "blogs-section": false,
-    "contact-section": false,
   });
-
-  // Contact section state variables
-  const [contactForm, setContactForm] = useState({ name: "", email: "", message: "" });
-  const [contactStep, setContactStep] = useState(0); // 0: Form, 1: Submitting, 2: Success
-  const [contactConsoleLines, setContactConsoleLines] = useState<string[]>([]);
-  const [contactProgress, setContactProgress] = useState(0);
 
   // Load dynamic portfolio data from Firestore / LocalStorage
   useEffect(() => {
@@ -134,9 +127,6 @@ export default function App() {
       } else if (e.key === "Tab" && !activeModal) {
         e.preventDefault();
         scrollToSection("about-section");
-      } else if (e.key === "m" && !activeModal && e.target === document.body) {
-        e.preventDefault();
-        scrollToSection("contact-section");
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -281,47 +271,11 @@ export default function App() {
   const handleAction = (actionKey: string) => {
     if (actionKey === "work") scrollToSection("projects-section");
     else if (actionKey === "about") scrollToSection("about-section");
-    else if (actionKey === "contact") scrollToSection("contact-section");
     else if (actionKey === "blog") scrollToSection("blogs-section");
   };
 
-  const handleContactChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setContactForm((prev) => ({ ...prev, [name]: value }));
-  };
 
-  const executeContactPipeline = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!contactForm.name || !contactForm.email || !contactForm.message) return;
 
-    setContactStep(1);
-    setContactConsoleLines(["INITIALIZING SECURE TRANSPORT LAYER PROTOCOL..."]);
-
-    const logs = [
-      "RESOLVING TARGET ENDPOINT: TRUNGDAO131105@GMAIL.COM...",
-      "ESTABLISHING SSL HANDSHAKE [ECDHE-RSA-AES128-GCM-SHA256]...",
-      "CREATING DATASTREAM CHUNK...",
-      `ENCRYPTING MESSAGE DATA FROM <${contactForm.email}>...`,
-      "COMPILED SPECS VERIFIED. WRITING STRUCTURAL PAYLOAD...",
-      "PUSHING TO DATALAKE PIPELINE: SUCCESS [200 OK]"
-    ];
-
-    for (let i = 0; i < logs.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 350));
-      setContactConsoleLines((prev) => [...prev, logs[i]]);
-      setContactProgress(((i + 1) / logs.length) * 100);
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    setContactStep(2);
-  };
-
-  const handleContactReset = () => {
-    setContactForm({ name: "", email: "", message: "" });
-    setContactConsoleLines([]);
-    setContactStep(0);
-    setContactProgress(0);
-  };
 
   const handleBackToPortfolio = () => {
     if (window.history.state && window.history.state.blogId) {
@@ -335,7 +289,6 @@ export default function App() {
   const isAboutRevealed = revealedSections["about-section"];
   const isProjectsRevealed = revealedSections["projects-section"];
   const isBlogsRevealed = revealedSections["blogs-section"];
-  const isContactRevealed = revealedSections["contact-section"];
 
   return (
     <div className="relative min-h-screen bg-[#ebeae4] text-[#111111] overflow-x-hidden selection:bg-neutral-900 selection:text-[#ebeae4]">
@@ -399,14 +352,6 @@ export default function App() {
               className="font-mono text-xs tracking-wider text-neutral-800 hover:text-neutral-950 font-medium relative group"
             >
               ABOUT
-              <span className="absolute left-0 right-0 -bottom-1 h-[1px] bg-neutral-950 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-200" />
-            </button>
-            <button
-              id="nav-contact"
-              onClick={() => scrollToSection("contact-section")}
-              className="font-mono text-xs tracking-wider text-neutral-800 hover:text-neutral-950 font-medium relative group"
-            >
-              CONTACT
               <span className="absolute left-0 right-0 -bottom-1 h-[1px] bg-neutral-950 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-200" />
             </button>
           </nav>
@@ -850,183 +795,6 @@ export default function App() {
           </div>
         </section>
 
-        {/* ==================== CONTACT SECTION ==================== */}
-        <section
-          id="contact-section"
-          className="reveal-section w-full pt-20 pb-24 border-t border-transparent relative text-left"
-        >
-          {/* Expanding border line */}
-          <div className={`expand-line h-[2px] bg-neutral-950 mb-12 transition-all duration-1000 ${isContactRevealed ? "w-full" : "w-0"}`} />
-
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
-            {/* Left side header */}
-            <div className="md:col-span-5 flex flex-col justify-between gap-8">
-              <div>
-                <p className={`fade-text font-mono text-xs tracking-widest text-neutral-500 uppercase mb-2 ${isContactRevealed ? "opacity-100" : "opacity-0"}`}>
-                  SECURE STREAM PIPELINE // TX // TRUNGDAO131105@GMAIL.COM
-                </p>
-                <h2 className={`fade-text font-display text-4xl font-black tracking-tight text-[#111111] uppercase mb-4 ${isContactRevealed ? "opacity-100" : "opacity-0"}`}>
-                  CONTACT SYSTEM
-                </h2>
-                <p className={`fade-text text-neutral-600 text-sm leading-relaxed max-w-sm ${isContactRevealed ? "opacity-100" : "opacity-0"}`}>
-                  Initiate a secure data transfer directly to my inbox. Enter your parameters and execute the transmission pipeline.
-                </p>
-              </div>
-
-              <div className={`fade-text hidden md:block ${isContactRevealed ? "opacity-100" : "opacity-0"}`}>
-                <a href="https://www.facebook.com/milesdao13" target="_blank" rel="noopener noreferrer" title="Facebook Profile" className="hover:opacity-85 transition-opacity block w-[280px] h-[40px]">
-                  <Barcode id="contact-section-barcode" width={280} height={40} />
-                </a>
-                <p className="font-mono text-[9px] text-neutral-400 mt-1 uppercase">SECURE TRANSFER PORTAL 26</p>
-              </div>
-            </div>
-
-            {/* Right side form / console */}
-            <div className={`md:col-span-7 bg-neutral-900 border border-neutral-950 p-6 md:p-8 rounded-lg shadow-lg stagger-card text-[#ebeae4] ${isContactRevealed ? "opacity-100" : "opacity-0"}`}>
-              <AnimatePresence mode="wait">
-                {contactStep === 0 && (
-                  <motion.form
-                    id="contact-section-form"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onSubmit={executeContactPipeline}
-                    className="space-y-5"
-                  >
-                    <div>
-                      <label className="block font-mono text-[10px] tracking-wider text-neutral-400 uppercase mb-1.5">
-                        IDENTIFIER NAME [INPUT]
-                      </label>
-                      <input
-                        id="contact-section-name"
-                        type="text"
-                        name="name"
-                        required
-                        value={contactForm.name}
-                        onChange={handleContactChange}
-                        placeholder="E.G., JOHN DOE"
-                        className="w-full bg-neutral-950 border border-neutral-700 rounded px-4 py-3 font-mono text-xs text-[#ebeae4] focus:border-green-400 focus:outline-none transition-colors uppercase placeholder-neutral-700"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-mono text-[10px] tracking-wider text-neutral-400 uppercase mb-1.5">
-                        EMAIL VECTOR [ROUTE]
-                      </label>
-                      <input
-                        id="contact-section-email"
-                        type="email"
-                        name="email"
-                        required
-                        value={contactForm.email}
-                        onChange={handleContactChange}
-                        placeholder="E.G., DEVS@DOMAIN.COM"
-                        className="w-full bg-neutral-950 border border-neutral-700 rounded px-4 py-3 font-mono text-xs text-[#ebeae4] focus:border-green-400 focus:outline-none transition-colors uppercase placeholder-neutral-700"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-mono text-[10px] tracking-wider text-neutral-400 uppercase mb-1.5">
-                        TRANSMISSION MESSAGE [PAYLOAD]
-                      </label>
-                      <textarea
-                        id="contact-section-message"
-                        name="message"
-                        required
-                        rows={4}
-                        value={contactForm.message}
-                        onChange={handleContactChange}
-                        placeholder="ENTER DETAILED LOGICAL PROPOSAL..."
-                        className="w-full bg-neutral-950 border border-neutral-700 rounded px-4 py-3 font-mono text-xs text-[#ebeae4] focus:border-green-400 focus:outline-none transition-colors uppercase placeholder-neutral-700 resize-none"
-                      />
-                    </div>
-
-                    <button
-                      id="contact-section-submit"
-                      type="submit"
-                      className="w-full flex items-center justify-center gap-2 bg-[#ebeae4] hover:bg-white text-neutral-950 font-mono text-xs font-black py-3.5 px-6 rounded uppercase transition-colors cursor-pointer"
-                    >
-                      INITIALIZE PIPE TRANSMISSION
-                    </button>
-                  </motion.form>
-                )}
-
-                {contactStep === 1 && (
-                  <motion.div
-                    key="section-pipeline-submitting"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="space-y-5"
-                  >
-                    <div className="bg-neutral-950 border border-neutral-800 rounded p-4 font-mono text-[10px] text-green-400 space-y-2 h-64 overflow-y-auto">
-                      {contactConsoleLines.map((line, idx) => (
-                        <div key={idx} className="flex items-start gap-1">
-                          <span className="text-neutral-600">&gt;</span>
-                          <p>{line}</p>
-                        </div>
-                      ))}
-                      <div className="w-2 h-4 bg-green-400 animate-pulse inline-block" />
-                    </div>
-
-                    {/* Progress bar */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between font-mono text-[10px] text-neutral-400">
-                        <span>TRANSMITTING ENCRYPTED STREAMS</span>
-                        <span>{Math.round(contactProgress)}%</span>
-                      </div>
-                      <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                        <motion.div
-                          className="h-full bg-green-400"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${contactProgress}%` }}
-                          transition={{ duration: 0.2 }}
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {contactStep === 2 && (
-                  <motion.div
-                    key="section-pipeline-success"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="text-center py-6 space-y-5 flex flex-col items-center justify-center h-full"
-                  >
-                    <span className="w-12 h-12 rounded-full border-2 border-green-400 flex items-center justify-center text-green-400 font-bold text-xl animate-bounce">✓</span>
-                    <div className="space-y-2">
-                      <p className="font-display text-xl font-black text-neutral-100 uppercase">
-                        DATA STREAM WRITE STATUS OK
-                      </p>
-                      <p className="font-mono text-neutral-400 text-[11px] max-w-sm mx-auto uppercase">
-                        Your transmission was successfully cached and piped securely. I will monitor this segment vector and respond shortly.
-                      </p>
-                    </div>
-
-                    <div className="border border-neutral-800 bg-neutral-950 p-4 rounded text-left font-mono text-[10px] space-y-1 text-neutral-400 max-w-sm w-full">
-                      <p className="text-[#ebeae4] font-bold">TRANSMISSION HEADER ID:</p>
-                      <p>M-DAO-{(Math.random() * 10000000).toFixed(0)}</p>
-                      <p className="pt-2 text-[#ebeae4] font-bold">ROUTED TARGET ENDPOINT:</p>
-                      <p>TRUNGDAO131105@GMAIL.COM</p>
-                      <p className="pt-2 text-[#ebeae4] font-bold">HOST VECTOR TIMESTAMP:</p>
-                      <p>{new Date().toISOString()}</p>
-                    </div>
-
-                    <button
-                      id="section-reset-contact"
-                      onClick={handleContactReset}
-                      className="bg-neutral-850 hover:bg-neutral-750 border border-neutral-700 text-[#ebeae4] font-mono text-xs px-5 py-2.5 rounded uppercase transition-colors cursor-pointer"
-                    >
-                      COMPILE NEW PAYLOAD
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        </section>
 
         {/* ==================== FOOTER SECTION ==================== */}
         <footer
