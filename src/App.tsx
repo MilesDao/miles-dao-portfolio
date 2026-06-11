@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Asterisk, ArrowUpRight, Search, Mail, Cpu, ChevronRight, Terminal, Calendar } from "lucide-react";
-// @ts-ignore
-import { animate, createTimeline, stagger } from "animejs";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { ScrollToPlugin } from "gsap/ScrollToPlugin";
+import { useGSAP } from "@gsap/react";
+
+gsap.registerPlugin(ScrollTrigger, ScrollToPlugin, useGSAP);
 
 import WireframeSphere from "./components/WireframeSphere";
 import Barcode from "./components/Barcode";
@@ -34,6 +38,7 @@ const base64ToBlobUrl = (base64Data: string): string => {
 
 
 export default function App() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);
   const [currentTime, setCurrentTime] = useState("");
@@ -44,11 +49,6 @@ export default function App() {
   const [editingBlog, setEditingBlog] = useState<Blog | null>(null);
   const [cvName, setCvName] = useState("");
   const [cvBlobUrl, setCvBlobUrl] = useState("");
-  const [revealedSections, setRevealedSections] = useState<Record<string, boolean>>({
-    "about-section": false,
-    "projects-section": false,
-    "blogs-section": false,
-  });
 
   // Load dynamic portfolio data from Firestore / LocalStorage
   useEffect(() => {
@@ -147,123 +147,123 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Entrance animations on page load
+  // Lock body scroll when full-page overlay is active
   useEffect(() => {
-    createTimeline({
-      defaults: { ease: 'easeOutExpo' }
-    })
-    .add('#logo-brand', {
-      opacity: [0, 1],
-      translateX: [-40, 0],
-      duration: 1000,
-      delay: 100
-    })
-    .add('#meta-navigation button', {
-      opacity: [0, 1],
-      translateY: [-20, 0],
-      delay: stagger(60),
-      duration: 800
-    }, '-=800')
-    .add('#quick-actions button', {
-      opacity: [0, 1],
-      translateX: [30, 0],
-      delay: stagger(80),
-      duration: 800
-    }, '-=800')
-    .add('#giant-name-header span', {
-      opacity: [0, 1],
-      translateY: [100, 0],
-      delay: stagger(150),
-      duration: 1000
-    }, '-=900')
-    .add('#hero-left-metadata, #cta-explore-btn', {
-      opacity: [0, 1],
-      translateY: [25, 0],
-      delay: stagger(100),
-      duration: 900
-    }, '-=700')
-    .add('#hero-right-visual', {
-      opacity: [0, 1],
-      scale: [0.97, 1],
-      duration: 1000
-    }, '-=850');
-  }, []);
+    const isLocked = !!selectedBlog || !!editingBlog || activeModal === "admin";
+    if (isLocked) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [selectedBlog, editingBlog, activeModal]);
 
-  // Scroll reveal animations
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const target = entry.target as HTMLElement;
-            const sectionId = target.id;
+  // Entrance animations on page load (Subtle premium micro-animations)
+  useGSAP(() => {
+    const tl = gsap.timeline({
+      defaults: { ease: "power2.out", duration: 0.5 }
+    });
 
-            if (!revealedSections[sectionId]) {
-              setRevealedSections((prev) => ({ ...prev, [sectionId]: true }));
-
-              // Expand top border line
-              const line = target.querySelector(".expand-line");
-              if (line) {
-                animate(line, {
-                  width: ["0%", "100%"],
-                  easing: "easeOutQuart",
-                  duration: 1200
-                });
-              }
-
-              // Fade/slide header texts
-              const texts = target.querySelectorAll(".fade-text");
-              if (texts.length > 0) {
-                animate(texts, {
-                  opacity: [0, 1],
-                  translateX: [-25, 0],
-                  delay: stagger(60),
-                  easing: "easeOutQuart",
-                  duration: 900
-                });
-              }
-
-              // Stagger reveal child elements
-              const cards = target.querySelectorAll(".stagger-card");
-              if (cards.length > 0) {
-                animate(cards, {
-                  opacity: [0, 1],
-                  translateY: [40, 0],
-                  delay: stagger(120),
-                  easing: "easeOutQuad",
-                  duration: 900
-                });
-              }
-            }
-
-            observer.unobserve(target);
-          }
-        });
-      },
-      { threshold: 0.08 }
+    tl.fromTo("#logo-brand", 
+      { autoAlpha: 0, x: -15 },
+      { autoAlpha: 1, x: 0, duration: 0.5 },
+      0.1
+    )
+    .fromTo("#meta-navigation button", 
+      { autoAlpha: 0, y: -8 },
+      { autoAlpha: 1, y: 0, stagger: 0.04 },
+      0.15
+    )
+    .fromTo("#quick-actions button", 
+      { autoAlpha: 0, x: 8 },
+      { autoAlpha: 1, x: 0, stagger: 0.04 },
+      0.15
+    )
+    .fromTo("#giant-name-header span", 
+      { autoAlpha: 0, y: 15 },
+      { autoAlpha: 1, y: 0, stagger: 0.08, duration: 0.6, ease: "power3.out" },
+      0.2
+    )
+    .fromTo("#hero-left-metadata", 
+      { autoAlpha: 0, y: 10 },
+      { autoAlpha: 1, y: 0, duration: 0.5 },
+      0.4
+    )
+    .fromTo("#cta-explore-btn", 
+      { autoAlpha: 0, y: 10 },
+      { autoAlpha: 1, y: 0, duration: 0.5 },
+      0.45
+    )
+    .fromTo("#hero-right-visual", 
+      { autoAlpha: 0, scale: 0.96 },
+      { autoAlpha: 1, scale: 1, duration: 0.7, ease: "power3.out" },
+      0.3
     );
+  }, { scope: containerRef });
 
-    document.querySelectorAll(".reveal-section").forEach((el) => {
-      if (!revealedSections[el.id]) {
-        observer.observe(el);
+  // Scroll reveal animations powered by GSAP ScrollTrigger
+  useGSAP(() => {
+    if (projects.length === 0 && blogs.length === 0 && educationList.length === 0) return;
+
+    // Clean up existing scroll triggers to avoid leaks when state updates
+    ScrollTrigger.getAll().forEach(t => t.kill());
+
+    const sections = gsap.utils.toArray<HTMLElement>(".reveal-section");
+
+    sections.forEach((section) => {
+      const line = section.querySelector(".expand-line");
+      const texts = section.querySelectorAll(".fade-text");
+      const cards = section.querySelectorAll(".stagger-card");
+
+      const sectionTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: section,
+          start: "top 82%",
+          toggleActions: "play none none none"
+        }
+      });
+
+      if (line) {
+        sectionTl.fromTo(line, 
+          { scaleX: 0, transformOrigin: "left" }, 
+          { scaleX: 1, duration: 1.2, ease: "power4.out" }
+        );
+      }
+
+      if (texts.length > 0) {
+        sectionTl.fromTo(texts, 
+          { autoAlpha: 0, y: 12 },
+          { autoAlpha: 1, y: 0, stagger: 0.04, duration: 0.5, ease: "power2.out" },
+          "-=0.9"
+        );
+      }
+
+      if (cards.length > 0) {
+        sectionTl.fromTo(cards, 
+          { autoAlpha: 0, y: 15 },
+          { autoAlpha: 1, y: 0, stagger: 0.08, duration: 0.6, ease: "power3.out" },
+          "-=0.7"
+        );
       }
     });
 
-    return () => observer.disconnect();
-  }, [projects, blogs, revealedSections]);
+    ScrollTrigger.refresh();
+  }, { dependencies: [projects, blogs, educationList], scope: containerRef });
 
-  // Smooth scroll using anime.js
+  // Snappy smooth scroll using GSAP ScrollToPlugin
   const scrollToSection = (sectionId: string) => {
     const target = document.getElementById(sectionId);
     if (target) {
       const headerOffset = 85;
       const elementPosition = target.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+      const offsetPosition = elementPosition + window.scrollY - headerOffset;
 
-      animate([document.documentElement, document.body], {
-        scrollTop: offsetPosition,
-        duration: 900,
-        easing: "easeInOutCubic"
+      gsap.to(window, {
+        scrollTo: { y: offsetPosition, autoKill: true },
+        duration: 0.8,
+        ease: "power4.out" // sharp, organic slide deceleration
       });
     }
   };
@@ -286,12 +286,10 @@ export default function App() {
     }
   };
 
-  const isAboutRevealed = revealedSections["about-section"];
-  const isProjectsRevealed = revealedSections["projects-section"];
-  const isBlogsRevealed = revealedSections["blogs-section"];
+
 
   return (
-    <div className="relative min-h-screen bg-[#ebeae4] text-[#111111] overflow-x-hidden selection:bg-neutral-900 selection:text-[#ebeae4]">
+    <div ref={containerRef} className="relative min-h-screen bg-[#ebeae4] text-[#111111] overflow-x-hidden selection:bg-neutral-900 selection:text-[#ebeae4]">
       {/* Dynamic Animated Grain Overlay */}
       <div className="noise-overlay" />
 
@@ -377,10 +375,10 @@ export default function App() {
         </header>
 
         {/* ==================== HERO CONTENT SECTION ==================== */}
-        <main className="w-full grid grid-cols-12 gap-y-12 md:gap-4 mt-12 md:mt-16 mb-24 pt-4">
+        <main className="w-full grid grid-cols-12 gap-y-12 md:gap-8 lg:gap-16 mt-3 md:mt-4 pt-1 mb-24 pr-1">
 
           {/* LEFT AREA: Subtitle Paragraph & Massive MUGA ZERO styling for Miles Dao */}
-          <section className="col-span-12 md:col-span-7 flex flex-col justify-start items-start text-left pt-2 md:pt-4">
+          <section className="col-span-12 md:col-span-7 flex flex-col justify-start items-start text-left pt-2 md:pt-4 md:pr-4 lg:pr-8">
 
             {/* Top Technical subtitle header */}
             <div className="flex items-start gap-3 md:gap-4 mb-6 md:mb-8 select-none">
@@ -492,19 +490,19 @@ export default function App() {
           className="reveal-section w-full pt-20 pb-24 border-t border-transparent relative"
         >
           {/* Expanding border line */}
-          <div className={`expand-line h-[2px] bg-neutral-950 mb-12 transition-all duration-1000 ${isAboutRevealed ? "w-full" : "w-0"}`} />
+          <div className="expand-line h-[2px] bg-neutral-950 mb-12 w-full origin-left scale-x-0" />
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
             {/* Left side: Heading, Bio, Links */}
             <div className="md:col-span-5 flex flex-col justify-between gap-10 text-left">
               <div>
-                <p className={`fade-text font-mono text-xs tracking-widest text-neutral-500 uppercase mb-2 ${isAboutRevealed ? "opacity-100" : "opacity-0"}`}>
+                <p className="fade-text font-mono text-xs tracking-widest text-neutral-500 uppercase mb-2 opacity-0">
                   EX—26 // IDENTITY INDEX
                 </p>
-                <h2 className={`fade-text font-display text-4xl font-black tracking-tight text-neutral-900 mb-6 uppercase ${isAboutRevealed ? "opacity-100" : "opacity-0"}`}>
+                <h2 className="fade-text font-display text-4xl font-black tracking-tight text-neutral-900 mb-6 uppercase opacity-0">
                   MILES DAO // SPEC
                 </h2>
-                <div className={`fade-text border-l-4 border-neutral-950 pl-4 py-2 mb-8 ${isAboutRevealed ? "opacity-100" : "opacity-0"}`}>
+                <div className="fade-text border-l-4 border-neutral-950 pl-4 py-2 mb-8 opacity-0">
                   <p className="text-neutral-700 text-sm md:text-base leading-relaxed max-w-md font-medium">
                     I'm an undergraduate data scientist passionate about data and machine learning. Building insightful data solutions.
                   </p>
@@ -512,7 +510,7 @@ export default function App() {
               </div>
 
               {/* System Outbound Ports */}
-              <div className={`fade-text ${isAboutRevealed ? "opacity-100" : "opacity-0"}`}>
+              <div className="fade-text opacity-0">
                 <h3 className="font-mono text-xs font-bold text-neutral-400 uppercase tracking-widest mb-4">
                   SYSTEM OUTBOUND LINK PORTS
                 </h3>
@@ -564,7 +562,7 @@ export default function App() {
 
              {/* Right side: Education & Experience */}
              <div className="md:col-span-7 space-y-6 text-left">
-               <h3 className={`fade-text font-mono text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-300 pb-2 mb-4 ${isAboutRevealed ? "opacity-100" : "opacity-0"}`}>
+               <h3 className="fade-text font-mono text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-300 pb-2 mb-4 opacity-0">
                  EDUCATION & EXPERIENCE
                </h3>
  
@@ -572,7 +570,7 @@ export default function App() {
                  {educationList.map((entry, idx) => (
                    <div
                      key={entry.id || idx}
-                     className={`stagger-card border border-neutral-350 rounded overflow-hidden bg-neutral-200/20 hover:border-neutral-950 transition-colors duration-300 shadow-sm ${isAboutRevealed ? "opacity-100" : "opacity-0"}`}
+                     className="stagger-card border border-neutral-350 rounded overflow-hidden bg-neutral-200/20 hover:border-neutral-950 transition-colors duration-300 shadow-sm opacity-0"
                    >
                      <div className="bg-neutral-950 text-[#ebeae4] px-4 py-2.5 font-mono text-[10px] tracking-wider uppercase font-bold flex justify-between items-center">
                        <span>{entry.category}</span>
@@ -597,8 +595,8 @@ export default function App() {
                    </div>
                  ))}
                </div>
-             </div>
-          </div>
+              </div>
+           </div>
         </section>
 
         {/* ==================== PROJECTS SECTION ==================== */}
@@ -607,18 +605,18 @@ export default function App() {
           className="reveal-section w-full pt-20 pb-24 border-t border-transparent relative text-left"
         >
           {/* Expanding border line */}
-          <div className={`expand-line h-[2px] bg-neutral-950 mb-12 transition-all duration-1000 ${isProjectsRevealed ? "w-full" : "w-0"}`} />
+          <div className="expand-line h-[2px] bg-neutral-950 mb-12 w-full origin-left scale-x-0" />
 
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-4">
             <div>
-              <p className={`fade-text font-mono text-xs tracking-widest text-neutral-500 uppercase mb-2 ${isProjectsRevealed ? "opacity-100" : "opacity-0"}`}>
+              <p className="fade-text font-mono text-xs tracking-widest text-neutral-500 uppercase mb-2 opacity-0">
                 EX—26 // PORTFOLIO SERIES
               </p>
-              <h2 className={`fade-text font-display text-4xl font-black tracking-tight text-neutral-900 uppercase ${isProjectsRevealed ? "opacity-100" : "opacity-0"}`}>
+              <h2 className="fade-text font-display text-4xl font-black tracking-tight text-neutral-900 uppercase opacity-0">
                 CORE WORK INDEX
               </h2>
             </div>
-            <p className={`fade-text text-neutral-500 font-mono text-[9px] font-semibold tracking-wider ${isProjectsRevealed ? "opacity-100" : "opacity-0"}`}>
+            <p className="fade-text text-neutral-550 font-mono text-[9px] font-semibold tracking-wider opacity-0">
               SCROLL HORIZONTALLY TO EXPLORE // CHRONICLES
             </p>
           </div>
@@ -633,7 +631,7 @@ export default function App() {
               projects.map((proj) => (
                 <div
                   key={proj.id}
-                  className={`stagger-card snap-start w-[290px] sm:w-[350px] flex-shrink-0 group border-2 border-neutral-900 rounded-lg bg-neutral-50 hover:bg-white transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-md hover:-translate-y-1 ${isProjectsRevealed ? "opacity-100" : "opacity-0"}`}
+                  className="stagger-card snap-start w-[290px] sm:w-[350px] flex-shrink-0 group border-2 border-neutral-900 rounded-lg bg-neutral-50 hover:bg-white hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-md opacity-0"
                 >
                   <div>
                     {/* Project Image */}
@@ -703,18 +701,18 @@ export default function App() {
           className="reveal-section w-full pt-20 pb-24 border-t border-transparent relative text-left"
         >
           {/* Expanding border line */}
-          <div className={`expand-line h-[2px] bg-neutral-950 mb-12 transition-all duration-1000 ${isBlogsRevealed ? "w-full" : "w-0"}`} />
+          <div className="expand-line h-[2px] bg-neutral-950 mb-12 w-full origin-left scale-x-0" />
 
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-4">
             <div>
-              <p className={`fade-text font-mono text-xs tracking-widest text-neutral-500 uppercase mb-2 ${isBlogsRevealed ? "opacity-100" : "opacity-0"}`}>
+              <p className="fade-text font-mono text-xs tracking-widest text-neutral-500 uppercase mb-2 opacity-0">
                 EX—26 // TECHNICAL JOURNAL
               </p>
-              <h2 className={`fade-text font-display text-4xl font-black tracking-tight text-neutral-900 uppercase ${isBlogsRevealed ? "opacity-100" : "opacity-0"}`}>
+              <h2 className="fade-text font-display text-4xl font-black tracking-tight text-neutral-900 uppercase opacity-0">
                 BLOG REGISTERS
               </h2>
             </div>
-            <p className={`fade-text text-neutral-550 font-mono text-[9px] font-semibold tracking-wider ${isBlogsRevealed ? "opacity-100" : "opacity-0"}`}>
+            <p className="fade-text text-neutral-550 font-mono text-[9px] font-semibold tracking-wider opacity-0">
               CLICK AN ENTRY TO READ FULL SPEC ARCHIVE // METRICS
             </p>
           </div>
@@ -733,7 +731,7 @@ export default function App() {
                     window.history.pushState({ blogId: blog.id }, "", `?blog=${blog.id}`);
                     setSelectedBlog(blog);
                   }}
-                  className={`stagger-card snap-start w-[290px] sm:w-[350px] flex-shrink-0 group border-2 border-neutral-900 rounded-lg bg-neutral-50 hover:bg-white transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-md cursor-pointer hover:-translate-y-1 text-left ${isBlogsRevealed ? "opacity-100" : "opacity-0"}`}
+                  className="stagger-card snap-start w-[290px] sm:w-[350px] flex-shrink-0 group border-2 border-neutral-900 rounded-lg bg-neutral-50 hover:bg-white hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-md cursor-pointer text-left opacity-0"
                 >
                   <div>
                     {/* Blog Image */}
@@ -877,153 +875,146 @@ export default function App() {
               </header>
 
               {/* Main Content Layout */}
-              <main className="w-full max-w-5xl mx-auto py-4">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                  {/* Left Column: Image, Date, Tags */}
-                  <div className="lg:col-span-5 space-y-6 text-left">
-                    {selectedBlog.image && (
-                      <div className="border border-neutral-950 rounded-lg overflow-hidden bg-neutral-200 aspect-video lg:aspect-square shadow-sm">
-                        <img src={selectedBlog.image} alt={selectedBlog.title} className="w-full h-full object-cover" />
-                      </div>
-                    )}
-                    <div className="font-mono text-xs text-neutral-600 space-y-2.5 pt-4 border-t border-neutral-350">
-                      <p><span className="text-neutral-400 uppercase font-bold">PUBLISH DATE:</span> {selectedBlog.date}</p>
-                      <p><span className="text-neutral-400 uppercase font-bold">RECORD INDEX:</span> B-DAO-{selectedBlog.id.slice(-6).toUpperCase()}</p>
-                      <div className="flex flex-wrap gap-1.5 pt-2">
-                        {selectedBlog.tags.map((tag) => (
-                          <span key={tag} className="border border-neutral-350 bg-neutral-50 px-2 py-0.5 rounded text-[10px] uppercase font-semibold">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+              {/* Main Content Layout */}
+              <main className="w-full max-w-3xl mx-auto py-4 text-left">
+                <h1 className="font-display text-3xl md:text-5xl lg:text-6xl font-black tracking-tight text-neutral-950 uppercase leading-tight mb-6">
+                  {selectedBlog.title}
+                </h1>
+                
+                {/* Meta details row under Title */}
+                <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-neutral-600 border-b border-neutral-300 pb-6 mb-8 select-none">
+                  <p><span className="text-neutral-450 uppercase font-bold">DATE:</span> {selectedBlog.date}</p>
+                  <span className="text-neutral-400 hidden sm:inline">/</span>
+                  <p><span className="text-neutral-450 uppercase font-bold">INDEX:</span> B-DAO-{selectedBlog.id.slice(-6).toUpperCase()}</p>
+                  <span className="text-neutral-400 hidden sm:inline">/</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedBlog.tags.map((tag) => (
+                      <span key={tag} className="border border-neutral-350 bg-neutral-250/20 px-2 py-0.5 rounded text-[9px] uppercase font-bold text-neutral-700">
+                        {tag}
+                      </span>
+                    ))}
                   </div>
+                </div>
 
-                  {/* Right Column: Title, Summary, Content */}
-                  <div className="lg:col-span-7 space-y-6 text-left">
-                    <h1 className="font-display text-3xl md:text-5xl font-black tracking-tight text-neutral-950 uppercase leading-none">
-                      {selectedBlog.title}
-                    </h1>
-                    <p className="font-mono text-sm font-bold text-neutral-700 leading-relaxed border-l-4 border-neutral-950 pl-4 py-2 bg-neutral-200/40 pr-4 rounded-r">
-                      {selectedBlog.summary}
-                    </p>
-                    <div className="text-neutral-800 text-sm md:text-base leading-relaxed space-y-3 pt-6 border-t border-neutral-300">
-                      {(() => {
-                        // Parse stored JSON blocks and render them
-                        try {
-                          const raw = selectedBlog.content;
-                          if (!raw) return null;
-                          let blocks: any[] = [];
-                          if (raw.trim().startsWith("[")) {
-                            blocks = JSON.parse(raw);
-                          } else {
-                            // Fallback: render as plain text for legacy content
-                            return <p className="whitespace-pre-line">{raw}</p>;
-                          }
-                          return blocks.map((block: any, i: number) => {
-                            const key = block.id || `blk-${i}`;
-                            switch (block.type) {
-                              case "h1":
-                                return <h2 key={key} className="font-display font-black text-2xl text-neutral-950 uppercase tracking-tight mt-6 mb-2" dangerouslySetInnerHTML={{ __html: block.content }} />;
-                              case "h2":
-                                return <h3 key={key} className="font-mono font-bold text-lg text-neutral-900 uppercase mt-4 mb-1" dangerouslySetInnerHTML={{ __html: block.content }} />;
-                              case "bullet":
-                                return (
-                                  <div key={key} className="flex items-start gap-2.5 pl-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 mt-2 flex-shrink-0" />
-                                    <span dangerouslySetInnerHTML={{ __html: block.content }} />
-                                  </div>
-                                );
-                              case "todo":
-                                return (
-                                  <div key={key} className="flex items-center gap-2.5 pl-2 font-mono text-xs">
-                                    <input type="checkbox" checked={!!block.properties?.checked} readOnly className="w-3.5 h-3.5 rounded pointer-events-none" />
-                                    <span className={block.properties?.checked ? "line-through text-neutral-400" : ""} dangerouslySetInnerHTML={{ __html: block.content }} />
-                                  </div>
-                                );
-                              case "quote":
-                                return (
-                                  <blockquote key={key} className="border-l-4 border-neutral-950 pl-4 italic text-neutral-600 text-sm my-2" dangerouslySetInnerHTML={{ __html: block.content }} />
-                                );
-                              case "code":
-                                return (
-                                  <div key={key} className="bg-neutral-900 text-emerald-300 font-mono text-xs p-4 rounded my-2 overflow-x-auto">
-                                    {block.properties?.language && (
-                                      <div className="text-neutral-500 text-[10px] uppercase font-bold mb-2 pb-2 border-b border-neutral-800">{block.properties.language}</div>
-                                    )}
-                                    <pre className="whitespace-pre-wrap">{block.content}</pre>
-                                  </div>
-                                );
-                              case "callout":
-                                return (
-                                  <div key={key} className="bg-neutral-200/50 border border-neutral-300 rounded p-4 flex gap-3 my-2">
-                                    <span className="text-lg">{block.properties?.emoji || "💡"}</span>
-                                    <span dangerouslySetInnerHTML={{ __html: block.content }} />
-                                  </div>
-                                );
-                              case "toggle":
-                                return (
-                                  <details key={key} className="pl-1.5 my-1.5 group">
-                                    <summary className="font-bold text-sm cursor-pointer list-none flex items-center gap-1.5">
-                                      <span className="text-neutral-600 transition-transform group-open:rotate-90">▶</span>
-                                      <span dangerouslySetInnerHTML={{ __html: block.content }} />
-                                    </summary>
-                                    {block.properties?.bgColor && (
-                                      <div className="pl-8 border-l border-neutral-300 mt-2 py-1 text-sm text-neutral-500 whitespace-pre-line">{block.properties.bgColor}</div>
-                                    )}
-                                  </details>
-                                );
-                              case "math":
-                                return (
-                                  <div key={key} className="bg-neutral-200/30 border border-neutral-300 rounded p-4 my-2 text-center font-serif italic text-xl font-bold tracking-wide text-neutral-900">
-                                    {block.content || "E = mc²"}
-                                  </div>
-                                );
-                              case "table":
-                                if (block.properties?.tableData) {
-                                  return (
-                                    <div key={key} className="overflow-x-auto my-2">
-                                      <table className="border-collapse w-full font-mono text-xs">
-                                        <tbody>
-                                          {block.properties.tableData.map((row: string[], rIdx: number) => (
-                                            <tr key={rIdx} className={rIdx === 0 ? "bg-neutral-200/50 font-bold" : ""}>
-                                              {row.map((cell: string, cIdx: number) => (
-                                                <td key={cIdx} className="border border-neutral-400 p-2 min-w-[80px]">{cell}</td>
-                                              ))}
-                                            </tr>
+                <p className="font-mono text-sm md:text-base font-bold text-neutral-800 leading-relaxed border-l-4 border-neutral-950 pl-4 py-3 bg-neutral-200/40 pr-4 rounded-r mb-8">
+                  {selectedBlog.summary}
+                </p>
+
+                <div className="text-neutral-800 text-base md:text-lg leading-relaxed space-y-4">
+                  {(() => {
+                    // Parse stored JSON blocks and render them
+                    try {
+                      const raw = selectedBlog.content;
+                      if (!raw) return null;
+                      let blocks: any[] = [];
+                      if (raw.trim().startsWith("[")) {
+                        blocks = JSON.parse(raw);
+                      } else {
+                        // Fallback: render as plain text for legacy content
+                        return <p className="whitespace-pre-line text-base md:text-lg">{raw}</p>;
+                      }
+                      return blocks.map((block: any, i: number) => {
+                        const key = block.id || `blk-${i}`;
+                        switch (block.type) {
+                          case "h1":
+                            return <h2 key={key} className="font-display font-black text-2xl md:text-3xl text-neutral-950 uppercase tracking-tight mt-8 mb-3" dangerouslySetInnerHTML={{ __html: block.content }} />;
+                          case "h2":
+                            return <h3 key={key} className="font-mono font-bold text-lg md:text-xl text-neutral-900 uppercase mt-6 mb-2" dangerouslySetInnerHTML={{ __html: block.content }} />;
+                          case "bullet":
+                            return (
+                              <div key={key} className="flex items-start gap-2.5 pl-2 text-base md:text-lg leading-relaxed">
+                                <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 mt-2.5 flex-shrink-0" />
+                                <span dangerouslySetInnerHTML={{ __html: block.content }} />
+                              </div>
+                            );
+                          case "todo":
+                            return (
+                              <div key={key} className="flex items-center gap-2.5 pl-2 font-mono text-sm">
+                                <input type="checkbox" checked={!!block.properties?.checked} readOnly className="w-3.5 h-3.5 rounded pointer-events-none" />
+                                <span className={block.properties?.checked ? "line-through text-neutral-400" : ""} dangerouslySetInnerHTML={{ __html: block.content }} />
+                              </div>
+                            );
+                          case "quote":
+                            return (
+                              <blockquote key={key} className="border-l-4 border-neutral-950 pl-4 italic text-neutral-605 text-base md:text-lg my-4 bg-neutral-250/10 py-2.5 pr-4 rounded-r" dangerouslySetInnerHTML={{ __html: block.content }} />
+                            );
+                          case "code":
+                            return (
+                              <div key={key} className="bg-neutral-900 text-emerald-300 font-mono text-xs md:text-sm p-4 md:p-6 rounded my-4 overflow-x-auto">
+                                {block.properties?.language && (
+                                  <div className="text-neutral-500 text-[10px] uppercase font-bold mb-2 pb-2 border-b border-neutral-800">{block.properties.language}</div>
+                                )}
+                                <pre className="whitespace-pre-wrap">{block.content}</pre>
+                              </div>
+                            );
+                          case "callout":
+                            return (
+                              <div key={key} className="bg-neutral-200/50 border border-neutral-300 rounded p-4 flex gap-3 my-4 text-base md:text-lg">
+                                <span className="text-lg">{block.properties?.emoji || "💡"}</span>
+                                <span dangerouslySetInnerHTML={{ __html: block.content }} />
+                              </div>
+                            );
+                          case "toggle":
+                            return (
+                              <details key={key} className="pl-1.5 my-1.5 group">
+                                <summary className="font-bold text-sm cursor-pointer list-none flex items-center gap-1.5">
+                                  <span className="text-neutral-600 transition-transform group-open:rotate-90">▶</span>
+                                  <span dangerouslySetInnerHTML={{ __html: block.content }} />
+                                </summary>
+                                {block.properties?.bgColor && (
+                                  <div className="pl-8 border-l border-neutral-300 mt-2 py-1 text-sm text-neutral-500 whitespace-pre-line">{block.properties.bgColor}</div>
+                                )}
+                              </details>
+                            );
+                          case "math":
+                            return (
+                              <div key={key} className="bg-neutral-200/30 border border-neutral-300 rounded p-4 my-2 text-center font-serif italic text-xl font-bold tracking-wide text-neutral-900">
+                                {block.content || "E = mc²"}
+                              </div>
+                            );
+                          case "table":
+                            if (block.properties?.tableData) {
+                              return (
+                                <div key={key} className="overflow-x-auto my-2">
+                                  <table className="border-collapse w-full font-mono text-xs">
+                                    <tbody>
+                                      {block.properties.tableData.map((row: string[], rIdx: number) => (
+                                        <tr key={rIdx} className={rIdx === 0 ? "bg-neutral-200/50 font-bold" : ""}>
+                                          {row.map((cell: string, cIdx: number) => (
+                                            <td key={cIdx} className="border border-neutral-400 p-2 min-w-[80px]">{cell}</td>
                                           ))}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  );
-                                }
-                                return null;
-                              case "image":
-                                return block.properties?.imageUrl ? (
-                                  <figure key={key} className="my-3" style={{ width: `${block.properties?.imageWidth ?? 100}%`, margin: "0 auto" }}>
-                                    <img src={block.properties.imageUrl} alt={block.content || "Image"} className="w-full rounded border border-neutral-300 shadow-sm" />
-                                    {block.content && (
-                                      <figcaption className="text-center text-xs text-neutral-400 mt-2 italic">{block.content}</figcaption>
-                                    )}
-                                  </figure>
-                                ) : null;
-                              case "toc":
-                                return null; // TOC is editor-only
-                              case "synced":
-                                return <div key={key} className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: block.content }} />;
-                              default:
-                                // paragraph
-                                if (!block.content) return <div key={key} className="h-4" />; // empty paragraph = spacer
-                                return <p key={key} className="leading-relaxed" dangerouslySetInnerHTML={{ __html: block.content }} />;
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              );
                             }
-                          });
-                        } catch {
-                          // If parsing fails, render as plain text
-                          return <p className="whitespace-pre-line">{selectedBlog.content}</p>;
+                            return null;
+                          case "image":
+                            return block.properties?.imageUrl ? (
+                              <figure key={key} className="my-3" style={{ width: `${block.properties?.imageWidth ?? 100}%`, margin: "0 auto" }}>
+                                <img src={block.properties.imageUrl} alt={block.content || "Image"} className="w-full rounded border border-neutral-300 shadow-sm" />
+                                {block.content && (
+                                  <figcaption className="text-center text-xs text-neutral-400 mt-2 italic">{block.content}</figcaption>
+                                )}
+                              </figure>
+                            ) : null;
+                          case "toc":
+                            return null; // TOC is editor-only
+                          case "synced":
+                            return <div key={key} className="text-base md:text-lg leading-relaxed" dangerouslySetInnerHTML={{ __html: block.content }} />;
+                          default:
+                            // paragraph
+                            if (!block.content) return <div key={key} className="h-4" />; // empty paragraph = spacer
+                            return <p key={key} className="text-base md:text-lg leading-relaxed" dangerouslySetInnerHTML={{ __html: block.content }} />;
                         }
-                      })()}
-                    </div>
-                  </div>
+                      });
+                    } catch {
+                      // If parsing fails, render as plain text
+                      return <p className="text-base md:text-lg whitespace-pre-line">{selectedBlog.content}</p>;
+                    }
+                  })()}
                 </div>
               </main>
             </div>

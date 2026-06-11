@@ -9,6 +9,9 @@ import {
   getEducationExperience, saveEducationExperience, deleteEducationExperience
 } from "../firebase";
 import { Project, Blog, EducationExperience } from "../types";
+import { parseMarkdownToBlocks } from "./BlogEditor";
+import { generateBlogContent } from "../utils/openrouter";
+import { Sparkles, Loader2 } from "lucide-react";
 
 interface ImageUploadAreaProps {
   imageValue: string;
@@ -151,6 +154,7 @@ export default function AdminModal({ id, isOpen, onClose, educationList, onRefre
     link: "",
     image: ""
   });
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
 
   const [blogForm, setBlogForm] = useState({
     title: "",
@@ -168,6 +172,16 @@ export default function AdminModal({ id, isOpen, onClose, educationList, onRefre
     itemsText: "",
     sortOrder: "1"
   });
+
+  const [blogInputMode, setBlogInputMode] = useState<"manual" | "ai">("manual");
+  const [aiForm, setAiForm] = useState({
+    apiKey: "",
+    model: "openai/gpt-oss-120b:free",
+    blogType: "paper" as "paper" | "technical" | "personal",
+    text: "",
+    tone: ""
+  });
+  const [aiGenerating, setAiGenerating] = useState(false);
 
   // Load lists upon successful authentication
   useEffect(() => {
@@ -314,13 +328,39 @@ export default function AdminModal({ id, isOpen, onClose, educationList, onRefre
   };
 
   // --- PROJECT CRUD HANDLERS ---
+  const handleEditProjectClick = (proj: Project) => {
+    setEditingProject(proj);
+    setProjectForm({
+      title: proj.title,
+      category: proj.category,
+      year: proj.year,
+      description: proj.description,
+      tags: proj.tags.join(", "),
+      link: proj.link || "",
+      image: proj.image || ""
+    });
+  };
+
+  const handleCancelEditProject = () => {
+    setEditingProject(null);
+    setProjectForm({
+      title: "",
+      category: "",
+      year: new Date().getFullYear().toString(),
+      description: "",
+      tags: "",
+      link: "",
+      image: ""
+    });
+  };
+
   const handleProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectForm.title || !projectForm.category || !projectForm.description) return;
 
     setIsLoading(true);
     const newProj: Project = {
-      id: `proj-${Date.now()}`,
+      id: editingProject ? editingProject.id : `proj-${Date.now()}`,
       title: projectForm.title.toUpperCase(),
       category: projectForm.category,
       year: projectForm.year,
@@ -328,15 +368,16 @@ export default function AdminModal({ id, isOpen, onClose, educationList, onRefre
       tags: projectForm.tags.split(",").map(t => t.trim()).filter(Boolean),
       link: projectForm.link || undefined,
       image: projectForm.image || "/assets/project_visual.png",
-      sortOrder: projectsList.length + 1
+      sortOrder: editingProject ? (editingProject.sortOrder ?? 1) : (projectsList.length + 1)
     };
 
     try {
       await saveProject(newProj);
       setProjectForm({ title: "", category: "", year: new Date().getFullYear().toString(), description: "", tags: "", link: "", image: "" });
+      setEditingProject(null);
       await loadAllData();
       await onRefreshData();
-      alert("Project saved successfully!");
+      alert(editingProject ? "Project updated successfully!" : "Project saved successfully!");
     } catch (err: any) {
       console.error("Error saving project:", err);
       const errMsg = err.message || "";
@@ -416,6 +457,56 @@ export default function AdminModal({ id, isOpen, onClose, educationList, onRefre
       alert("Error deleting blog post");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAIGenerateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiForm.text) {
+      alert("Please enter the source text or abstract first.");
+      return;
+    }
+
+    setAiGenerating(true);
+    try {
+      const result = await generateBlogContent({
+        text: aiForm.text,
+        blogType: aiForm.blogType,
+        model: aiForm.model,
+        tone: aiForm.tone,
+        customApiKey: aiForm.apiKey || undefined
+      });
+
+      // Parse the generated markdown into Notion blocks
+      const blocks = parseMarkdownToBlocks(result.content);
+      const jsonContent = JSON.stringify(blocks, null, 2);
+
+      const newBlog: Blog = {
+        id: `blog-${Date.now()}`,
+        title: result.title.toUpperCase(),
+        category: result.category,
+        date: new Date().toISOString().split("T")[0],
+        summary: result.summary,
+        content: jsonContent,
+        tags: result.tags,
+        image: "/assets/blog_visual.png",
+        sortOrder: blogsList.length + 1
+      };
+
+      await saveBlog(newBlog);
+      
+      // Reset text inputs
+      setAiForm(prev => ({ ...prev, text: "", tone: "" }));
+      await loadAllData();
+      await onRefreshData();
+      
+      alert("AI Blog Draft generated and saved successfully!");
+      setBlogInputMode("manual"); // Switch back to manual view to see list
+    } catch (err: any) {
+      console.error("AI blog generation failed:", err);
+      alert(`AI blog generation failed: ${err.message || err}`);
+    } finally {
+      setAiGenerating(false);
     }
   };
 
@@ -603,8 +694,17 @@ export default function AdminModal({ id, isOpen, onClose, educationList, onRefre
                   <div className="space-y-6">
                     {/* Add Project Form */}
                     <form onSubmit={handleProjectSubmit} className="space-y-3 bg-neutral-100 p-4 border border-neutral-300 rounded">
-                      <h4 className="font-mono text-xs font-black uppercase text-neutral-800 pb-1 border-b border-neutral-300">
-                        ADD PROJECT ENTRY
+                      <h4 className="font-mono text-xs font-black uppercase text-neutral-800 pb-1 border-b border-neutral-300 flex justify-between items-center">
+                        <span>{editingProject ? "EDIT PROJECT ENTRY" : "ADD PROJECT ENTRY"}</span>
+                        {editingProject && (
+                          <button
+                            type="button"
+                            onClick={handleCancelEditProject}
+                            className="text-red-500 hover:text-red-700 font-bold font-mono text-[9px] uppercase cursor-pointer"
+                          >
+                            [Cancel Edit]
+                          </button>
+                        )}
                       </h4>
                       <div className="grid grid-cols-2 gap-3">
                         <input
@@ -661,8 +761,9 @@ export default function AdminModal({ id, isOpen, onClose, educationList, onRefre
                           onImageChange={(base64) => setProjectForm({...projectForm, image: base64})}
                         />
                       </div>
-                      <button type="submit" className="flex items-center gap-1.5 px-4 py-2 bg-neutral-950 text-[#ebeae4] rounded font-mono text-[10px] font-black uppercase tracking-wider hover:bg-neutral-800 transition-colors">
-                        <Plus size={12} /> DEPLOY ARTIFACT
+                      <button type="submit" className="flex items-center gap-1.5 px-4 py-2 bg-neutral-950 text-[#ebeae4] rounded font-mono text-[10px] font-black uppercase tracking-wider hover:bg-neutral-800 transition-colors cursor-pointer">
+                        {editingProject ? <Check size={12} /> : <Plus size={12} />}
+                        {editingProject ? "UPDATE ARTIFACT" : "DEPLOY ARTIFACT"}
                       </button>
                     </form>
 
@@ -692,13 +793,22 @@ export default function AdminModal({ id, isOpen, onClose, educationList, onRefre
                                 <p className="text-[10px] text-neutral-500">{proj.category} // {proj.year}</p>
                               </div>
                             </div>
-                            <button
-                              onClick={() => handleProjectDelete(proj.id)}
-                              className="p-1.5 border border-red-200 rounded hover:bg-red-50 text-red-600 transition-colors"
-                              title="Delete project"
-                            >
-                              <Trash2 size={12} />
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEditProjectClick(proj)}
+                                className="p-1.5 border border-neutral-400 rounded hover:bg-neutral-950 hover:text-[#ebeae4] text-neutral-700 transition-colors cursor-pointer"
+                                title="Edit project details and thumbnail"
+                              >
+                                <Edit3 size={12} />
+                              </button>
+                              <button
+                                onClick={() => handleProjectDelete(proj.id)}
+                                className="p-1.5 border border-red-200 rounded hover:bg-red-50 text-red-600 transition-colors cursor-pointer"
+                                title="Delete project"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -708,63 +818,208 @@ export default function AdminModal({ id, isOpen, onClose, educationList, onRefre
 
                 {!isLoading && activeTab === "blogs" && (
                   <div className="space-y-6">
-                    {/* Add Blog Form */}
-                    <form onSubmit={handleBlogSubmit} className="space-y-3 bg-neutral-100 p-4 border border-neutral-300 rounded">
-                      <h4 className="font-mono text-xs font-black uppercase text-neutral-800 pb-1 border-b border-neutral-300">
-                        PUBLISH JOURNAL ENTRY
-                      </h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        <input
-                          type="text"
-                          placeholder="Article Title"
-                          value={blogForm.title}
-                          onChange={(e) => setBlogForm({...blogForm, title: e.target.value})}
-                          className="bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs"
-                          required
-                        />
-                        <input
-                          type="text"
-                          placeholder="Category (e.g., Machine Learning)"
-                          value={blogForm.category}
-                          onChange={(e) => setBlogForm({...blogForm, category: e.target.value})}
-                          className="bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs"
-                          required
-                        />
-                      </div>
-                      <div className="grid grid-cols-3 gap-3">
-                        <input
-                          type="text"
-                          placeholder="Tags (comma separated)"
-                          value={blogForm.tags}
-                          onChange={(e) => setBlogForm({...blogForm, tags: e.target.value})}
-                          className="col-span-3 bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs"
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 gap-3">
-                        <input
-                          type="text"
-                          placeholder="Short Summary / Excerpt"
-                          value={blogForm.summary}
-                          onChange={(e) => setBlogForm({...blogForm, summary: e.target.value})}
-                          className="bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs w-full"
-                        />
-                        <ImageUploadArea 
-                          label="BLOG POST COVER IMAGE"
-                          imageValue={blogForm.image}
-                          onImageChange={(base64) => setBlogForm({...blogForm, image: base64})}
-                        />
-                      </div>
-                      <textarea
-                        placeholder="Write article markdown content..."
-                        value={blogForm.content}
-                        onChange={(e) => setBlogForm({...blogForm, content: e.target.value})}
-                        className="w-full bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs h-24 resize-none"
-                        required
-                      />
-                      <button type="submit" className="flex items-center gap-1.5 px-4 py-2 bg-neutral-950 text-[#ebeae4] rounded font-mono text-[10px] font-black uppercase tracking-wider hover:bg-neutral-800 transition-colors">
-                        <Plus size={12} /> PUBLISH ARTICLE
+                    {/* Input Mode Selector */}
+                    <div className="flex gap-2 font-mono text-[10px] pb-2 border-b border-neutral-300">
+                      <button
+                        type="button"
+                        onClick={() => setBlogInputMode("manual")}
+                        className={`px-3 py-1 border border-neutral-950 rounded-sm uppercase font-bold transition-all cursor-pointer ${
+                          blogInputMode === "manual" ? "bg-neutral-950 text-[#ebeae4]" : "bg-neutral-200/60 text-neutral-700 hover:bg-neutral-200"
+                        }`}
+                      >
+                        MANUAL PUBLISH
                       </button>
-                    </form>
+                      <button
+                        type="button"
+                        onClick={() => setBlogInputMode("ai")}
+                        className={`px-3 py-1 border border-neutral-950 rounded-sm uppercase font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                          blogInputMode === "ai" ? "bg-neutral-950 text-[#ebeae4]" : "bg-neutral-200/60 text-neutral-700 hover:bg-neutral-200"
+                        }`}
+                      >
+                        <Sparkles size={10} /> AI DRAFT GENERATOR
+                      </button>
+                    </div>
+
+                    {blogInputMode === "manual" ? (
+                      /* Add Blog Form - Manual */
+                      <form onSubmit={handleBlogSubmit} className="space-y-3 bg-neutral-100 p-4 border border-neutral-300 rounded">
+                        <h4 className="font-mono text-xs font-black uppercase text-neutral-800 pb-1 border-b border-neutral-300">
+                          PUBLISH JOURNAL ENTRY
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <input
+                            type="text"
+                            placeholder="Article Title"
+                            value={blogForm.title}
+                            onChange={(e) => setBlogForm({...blogForm, title: e.target.value})}
+                            className="bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs"
+                            required
+                          />
+                          <input
+                            type="text"
+                            placeholder="Category (e.g., Machine Learning)"
+                            value={blogForm.category}
+                            onChange={(e) => setBlogForm({...blogForm, category: e.target.value})}
+                            className="bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs"
+                            required
+                          />
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <input
+                            type="text"
+                            placeholder="Tags (comma separated)"
+                            value={blogForm.tags}
+                            onChange={(e) => setBlogForm({...blogForm, tags: e.target.value})}
+                            className="col-span-3 bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs"
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 gap-3">
+                          <input
+                            type="text"
+                            placeholder="Short Summary / Excerpt"
+                            value={blogForm.summary}
+                            onChange={(e) => setBlogForm({...blogForm, summary: e.target.value})}
+                            className="bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs w-full"
+                          />
+                          <ImageUploadArea 
+                            label="BLOG POST COVER IMAGE"
+                            imageValue={blogForm.image}
+                            onImageChange={(base64) => setBlogForm({...blogForm, image: base64})}
+                          />
+                        </div>
+                        <textarea
+                          placeholder="Write article markdown content..."
+                          value={blogForm.content}
+                          onChange={(e) => setBlogForm({...blogForm, content: e.target.value})}
+                          className="w-full bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs h-24 resize-none"
+                          required
+                        />
+                        <button type="submit" className="flex items-center gap-1.5 px-4 py-2 bg-neutral-950 text-[#ebeae4] rounded font-mono text-[10px] font-black uppercase tracking-wider hover:bg-neutral-800 transition-colors cursor-pointer">
+                          <Plus size={12} /> PUBLISH ARTICLE
+                        </button>
+                      </form>
+                    ) : (
+                      /* Add Blog Form - AI Generator */
+                      <form onSubmit={handleAIGenerateSubmit} className="space-y-3 bg-neutral-100 p-4 border border-neutral-300 rounded text-left">
+                        <div className="flex justify-between items-center pb-1 border-b border-neutral-300">
+                          <h4 className="font-mono text-xs font-black uppercase text-neutral-800 flex items-center gap-1">
+                            <Sparkles size={14} className="text-neutral-950 animate-pulse" />
+                            AI BLOG DRAFT GENERATOR
+                          </h4>
+                          <span className="font-mono text-[9px] text-neutral-400 font-bold">POWERED BY OPENROUTER</span>
+                        </div>
+
+                        {/* OpenRouter API Key Input */}
+                        <div>
+                          <label className="block font-mono text-[9px] text-neutral-500 uppercase tracking-widest mb-1 font-bold">
+                            OpenRouter API Key (Overrides VITE_OPENROUTER_API_KEY in .env)
+                          </label>
+                          <input
+                            type="password"
+                            placeholder="Enter custom sk-or-... key if not set in .env"
+                            value={aiForm.apiKey}
+                            onChange={(e) => setAiForm({ ...aiForm, apiKey: e.target.value })}
+                            className="w-full bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs font-password"
+                          />
+                        </div>
+
+                        {/* Model & Type Selection */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block font-mono text-[9px] text-neutral-500 uppercase tracking-widest mb-1 font-bold">
+                              Select OpenRouter Model
+                            </label>
+                            <select
+                              value={aiForm.model}
+                              onChange={(e) => setAiForm({ ...aiForm, model: e.target.value })}
+                              className="w-full bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs"
+                            >
+                              <option value="openai/gpt-oss-120b:free">openai/gpt-oss-120b:free</option>
+                              <option value="openai/gpt-3.5-turbo">openai/gpt-3.5-turbo</option>
+                              <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
+                              <option value="google/gemini-2.5-flash">google/gemini-2.5-flash</option>
+                              <option value="meta-llama/llama-3-8b-instruct:free">meta-llama/llama-3-8b-instruct:free</option>
+                              <option value="google/gemini-2.5-pro">google/gemini-2.5-pro</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block font-mono text-[9px] text-neutral-500 uppercase tracking-widest mb-1 font-bold">
+                              Blog Post Type
+                            </label>
+                            <select
+                              value={aiForm.blogType}
+                              onChange={(e) => setAiForm({ ...aiForm, blogType: e.target.value as any })}
+                              className="w-full bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs"
+                            >
+                              <option value="paper">Research Paper Summary Review</option>
+                              <option value="technical">Technical Code Walkthrough / Tutorial</option>
+                              <option value="personal">Personal Insights / Reflections / Thoughts</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Custom model override */}
+                        <div>
+                          <label className="block font-mono text-[9px] text-neutral-500 uppercase tracking-widest mb-1 font-bold">
+                            Or Specify Custom Model Identifier (Optional Override)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. meta-llama/llama-3.1-70b-instruct"
+                            value={aiForm.model}
+                            onChange={(e) => setAiForm({ ...aiForm, model: e.target.value })}
+                            className="w-full bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs"
+                          />
+                        </div>
+
+                        {/* Tone & Guidelines */}
+                        <div>
+                          <label className="block font-mono text-[9px] text-neutral-500 uppercase tracking-widest mb-1 font-bold">
+                            Tone & Additional Instructions (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Focus on coding examples, write in a very casual tone, explain math simply..."
+                            value={aiForm.tone}
+                            onChange={(e) => setAiForm({ ...aiForm, tone: e.target.value })}
+                            className="w-full bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs"
+                          />
+                        </div>
+
+                        {/* Source Text Area */}
+                        <div>
+                          <label className="block font-mono text-[9px] text-neutral-500 uppercase tracking-widest mb-1 font-bold">
+                            Paste Paper Text / Abstract / Notes
+                          </label>
+                          <textarea
+                            placeholder="Paste the source material here (e.g., academic paper abstract, raw project notes, text dump)..."
+                            value={aiForm.text}
+                            onChange={(e) => setAiForm({ ...aiForm, text: e.target.value })}
+                            className="w-full bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs h-36 resize-y"
+                            required
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={aiGenerating}
+                          className="flex items-center gap-1.5 px-4 py-2 bg-neutral-950 text-[#ebeae4] rounded font-mono text-[10px] font-black uppercase tracking-wider hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                          {aiGenerating ? (
+                            <>
+                              <Loader2 size={12} className="animate-spin" />
+                              AI COMPILED BLOG WRITING IN PROGRESS...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles size={12} />
+                              GENERATE AI BLOG DRAFT
+                            </>
+                          )}
+                        </button>
+                      </form>
+                    )}
 
                     {/* Listing */}
                     <div className="space-y-2">

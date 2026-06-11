@@ -92,8 +92,8 @@ const DEFAULT_PROJECTS: Project[] = [
     title: "resume",
     category: "GitHub Project",
     year: "2026",
-    description: "",
-    tags: ["TypeScript"],
+    description: "A digital brutalist-inspired interactive developer resume and dynamic portfolio system.",
+    tags: ["TypeScript", "React", "Vite", "Firebase"],
     link: "https://github.com/MilesDao/resume",
     image: "/assets/project_visual.png",
     sortOrder: 5
@@ -103,8 +103,8 @@ const DEFAULT_PROJECTS: Project[] = [
     title: "MilesDao",
     category: "GitHub Project",
     year: "2026",
-    description: "Hello world!",
-    tags: [],
+    description: "Personal profile and repository index highlighting active computational research.",
+    tags: ["Markdown"],
     link: "https://github.com/MilesDao/MilesDao",
     image: "/assets/project_visual.png",
     sortOrder: 6
@@ -112,23 +112,21 @@ const DEFAULT_PROJECTS: Project[] = [
   {
     id: "proj-07",
     title: "Face-Recognition-Attendance-System-KNN-SVM",
-    category: "GitHub Project",
+    category: "Computer Vision",
     year: "2026",
-    description: "",
-    tags: ["Jupyter Notebook"],
+    description: "An automated attendance tracking system based on face recognition using KNN and SVM models.",
+    tags: ["Python", "Computer Vision", "KNN", "SVM", "Jupyter Notebook"],
     link: "https://github.com/MilesDao/Face-Recognition-Attendance-System-KNN-SVM",
-    image: "/assets/project_visual.png",
     sortOrder: 7
   },
   {
     id: "proj-08",
     title: "Vietnam-traffic-signs-classification",
-    category: "GitHub Project",
+    category: "Deep Learning",
     year: "2026",
-    description: "",
-    tags: ["Python"],
+    description: "A classification system using computer vision to identify Vietnamese traffic signs.",
+    tags: ["Python", "Deep Learning", "CNN"],
     link: "https://github.com/MilesDao/Vietnam-traffic-signs-classification",
-    image: "/assets/project_visual.png",
     sortOrder: 8
   },
   {
@@ -136,11 +134,41 @@ const DEFAULT_PROJECTS: Project[] = [
     title: "U-pose-3d-sam3d",
     category: "GitHub Project",
     year: "2026",
-    description: "",
+    description: "Research repository on 3D pose estimation and Segment Anything (SAM) implementation.",
     tags: ["Python"],
     link: "https://github.com/MilesDao/U-pose-3d-sam3d",
     image: "/assets/project_visual.png",
     sortOrder: 9
+  },
+  {
+    id: "proj-10",
+    title: "FlappyBird-Pose-Controlled",
+    category: "Interactive Vision",
+    year: "2026",
+    description: "An interactive vision-based game where the classic Flappy Bird is controlled through body pose estimation and gesture tracking.",
+    tags: ["Python", "OpenCV", "MediaPipe", "Pygame"],
+    link: "https://github.com/MilesDao/FlappyBird-Pose-Controlled",
+    sortOrder: 10
+  },
+  {
+    id: "proj-11",
+    title: "facebook-chatbot-rag",
+    category: "Natural Language Processing",
+    year: "2026",
+    description: "A Facebook Messenger chatbot using Retrieval-Augmented Generation (RAG) for smart contextual replies.",
+    tags: ["Python", "RAG", "LLM", "Facebook API"],
+    link: "https://github.com/MilesDao/facebook-chatbot-rag",
+    sortOrder: 11
+  },
+  {
+    id: "proj-12",
+    title: "USTH_chatbot_Rag",
+    category: "Natural Language Processing",
+    year: "2026",
+    description: "An intelligent RAG chatbot tailored for University of Science and Technology of Hanoi (USTH) questions.",
+    tags: ["Python", "RAG", "LLM", "ChromaDB", "USTH"],
+    link: "https://github.com/MilesDao/USTH_chatbot_Rag",
+    sortOrder: 12
   }
 ];
 
@@ -230,7 +258,7 @@ export async function getProjects(): Promise<Project[]> {
     return local.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }
   try {
-    const querySnapshot = await withTimeout(getDocs(collection(db, "projects")), 2000);
+    const querySnapshot = await withTimeout(getDocs(collection(db, "projects")), 8000);
     const projects: Project[] = [];
     querySnapshot.forEach((doc) => {
       projects.push({ ...doc.data() } as Project);
@@ -240,9 +268,12 @@ export async function getProjects(): Promise<Project[]> {
       for (const proj of DEFAULT_PROJECTS) {
         await saveProject(proj);
       }
+      saveLocalData("portfolio_projects", DEFAULT_PROJECTS);
       return [...DEFAULT_PROJECTS].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     }
-    return projects.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    const sortedProjects = projects.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    saveLocalData("portfolio_projects", sortedProjects); // Sync to local storage
+    return sortedProjects;
   } catch (err) {
     console.error("Firestore read error, falling back to LocalStorage:", err);
     const local = getLocalData("portfolio_projects", DEFAULT_PROJECTS);
@@ -251,16 +282,17 @@ export async function getProjects(): Promise<Project[]> {
 }
 
 export async function saveProject(project: Project): Promise<void> {
-  if (isFallbackMode) {
-    const list = getLocalData("portfolio_projects", DEFAULT_PROJECTS);
-    const index = list.findIndex(p => p.id === project.id);
-    if (index > -1) list[index] = project;
-    else list.push(project);
-    saveLocalData("portfolio_projects", list);
-    return;
-  }
+  // Always update LocalStorage cache first so fallback has the latest data
+  const list = getLocalData("portfolio_projects", DEFAULT_PROJECTS);
+  const index = list.findIndex(p => p.id === project.id);
+  if (index > -1) list[index] = project;
+  else list.push(project);
+  saveLocalData("portfolio_projects", list);
+
+  if (isFallbackMode) return;
+
   try {
-    await withTimeout(setDoc(doc(db, "projects", project.id), project), 2000);
+    await withTimeout(setDoc(doc(db, "projects", project.id), project), 15000);
   } catch (err) {
     console.error("Firestore write error:", err);
     throw err;
@@ -268,12 +300,13 @@ export async function saveProject(project: Project): Promise<void> {
 }
 
 export async function deleteProject(id: string): Promise<void> {
-  if (isFallbackMode) {
-    const list = getLocalData("portfolio_projects", DEFAULT_PROJECTS);
-    const filtered = list.filter(p => p.id !== id);
-    saveLocalData("portfolio_projects", filtered);
-    return;
-  }
+  // Always update LocalStorage cache first
+  const list = getLocalData("portfolio_projects", DEFAULT_PROJECTS);
+  const filtered = list.filter(p => p.id !== id);
+  saveLocalData("portfolio_projects", filtered);
+
+  if (isFallbackMode) return;
+
   try {
     await deleteDoc(doc(db, "projects", id));
   } catch (err) {
@@ -289,7 +322,7 @@ export async function getBlogs(): Promise<Blog[]> {
     return local.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }
   try {
-    const querySnapshot = await withTimeout(getDocs(collection(db, "blogs")), 2000);
+    const querySnapshot = await withTimeout(getDocs(collection(db, "blogs")), 8000);
     const blogs: Blog[] = [];
     querySnapshot.forEach((doc) => {
       blogs.push({ ...doc.data() } as Blog);
@@ -298,27 +331,31 @@ export async function getBlogs(): Promise<Blog[]> {
       for (const blog of DEFAULT_BLOGS) {
         await saveBlog(blog);
       }
+      saveLocalData("portfolio_blogs", DEFAULT_BLOGS);
       return [...DEFAULT_BLOGS].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     }
-    return blogs.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    const sortedBlogs = blogs.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    saveLocalData("portfolio_blogs", sortedBlogs); // Sync to local storage
+    return sortedBlogs;
   } catch (err) {
-    console.error("Firestore blogs read error:", err);
+    console.error("Firestore blogs read error, falling back to LocalStorage:", err);
     const local = getLocalData("portfolio_blogs", DEFAULT_BLOGS);
     return local.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }
 }
 
 export async function saveBlog(blog: Blog): Promise<void> {
-  if (isFallbackMode) {
-    const list = getLocalData("portfolio_blogs", DEFAULT_BLOGS);
-    const index = list.findIndex(b => b.id === blog.id);
-    if (index > -1) list[index] = blog;
-    else list.push(blog);
-    saveLocalData("portfolio_blogs", list);
-    return;
-  }
+  // Always update LocalStorage cache first
+  const list = getLocalData("portfolio_blogs", DEFAULT_BLOGS);
+  const index = list.findIndex(b => b.id === blog.id);
+  if (index > -1) list[index] = blog;
+  else list.push(blog);
+  saveLocalData("portfolio_blogs", list);
+
+  if (isFallbackMode) return;
+
   try {
-    await withTimeout(setDoc(doc(db, "blogs", blog.id), blog), 2000);
+    await withTimeout(setDoc(doc(db, "blogs", blog.id), blog), 15000);
   } catch (err) {
     console.error("Firestore blog write error:", err);
     throw err;
@@ -326,12 +363,13 @@ export async function saveBlog(blog: Blog): Promise<void> {
 }
 
 export async function deleteBlog(id: string): Promise<void> {
-  if (isFallbackMode) {
-    const list = getLocalData("portfolio_blogs", DEFAULT_BLOGS);
-    const filtered = list.filter(b => b.id !== id);
-    saveLocalData("portfolio_blogs", filtered);
-    return;
-  }
+  // Always update LocalStorage cache first
+  const list = getLocalData("portfolio_blogs", DEFAULT_BLOGS);
+  const filtered = list.filter(b => b.id !== id);
+  saveLocalData("portfolio_blogs", filtered);
+
+  if (isFallbackMode) return;
+
   try {
     await deleteDoc(doc(db, "blogs", id));
   } catch (err) {
@@ -355,24 +393,27 @@ export async function getMedia(): Promise<MediaItem[]> {
       for (const med of DEFAULT_MEDIA) {
         await saveMediaItem(med);
       }
+      saveLocalData("portfolio_media", DEFAULT_MEDIA);
       return DEFAULT_MEDIA;
     }
+    saveLocalData("portfolio_media", media); // Sync to local storage
     return media;
   } catch (err) {
-    console.error("Firestore media read error:", err);
+    console.error("Firestore media read error, falling back to LocalStorage:", err);
     return getLocalData("portfolio_media", DEFAULT_MEDIA);
   }
 }
 
 export async function saveMediaItem(item: MediaItem): Promise<void> {
-  if (isFallbackMode) {
-    const list = getLocalData("portfolio_media", DEFAULT_MEDIA);
-    const index = list.findIndex(m => m.id === item.id);
-    if (index > -1) list[index] = item;
-    else list.push(item);
-    saveLocalData("portfolio_media", list);
-    return;
-  }
+  // Always update LocalStorage cache first
+  const list = getLocalData("portfolio_media", DEFAULT_MEDIA);
+  const index = list.findIndex(m => m.id === item.id);
+  if (index > -1) list[index] = item;
+  else list.push(item);
+  saveLocalData("portfolio_media", list);
+
+  if (isFallbackMode) return;
+
   try {
     await setDoc(doc(db, "media", item.id), item);
   } catch (err) {
@@ -382,12 +423,13 @@ export async function saveMediaItem(item: MediaItem): Promise<void> {
 }
 
 export async function deleteMediaItem(id: string): Promise<void> {
-  if (isFallbackMode) {
-    const list = getLocalData("portfolio_media", DEFAULT_MEDIA);
-    const filtered = list.filter(m => m.id !== id);
-    saveLocalData("portfolio_media", filtered);
-    return;
-  }
+  // Always update LocalStorage cache first
+  const list = getLocalData("portfolio_media", DEFAULT_MEDIA);
+  const filtered = list.filter(m => m.id !== id);
+  saveLocalData("portfolio_media", filtered);
+
+  if (isFallbackMode) return;
+
   try {
     await deleteDoc(doc(db, "media", id));
   } catch (err) {
@@ -410,13 +452,16 @@ export async function getCV(): Promise<CVData | null> {
     return data ? JSON.parse(data) : null;
   }
   try {
-    const querySnapshot = await withTimeout(getDocs(collection(db, "config")), 2000);
+    const querySnapshot = await withTimeout(getDocs(collection(db, "config")), 8000);
     let cv: CVData | null = null;
     querySnapshot.forEach((doc) => {
       if (doc.id === "cv") {
         cv = { ...doc.data() } as CVData;
       }
     });
+    if (cv) {
+      localStorage.setItem("portfolio_cv", JSON.stringify(cv)); // Sync to local storage
+    }
     return cv;
   } catch (err) {
     console.error("Firestore CV read error, falling back to LocalStorage:", err);
@@ -432,12 +477,13 @@ export async function saveCV(cv: { name: string, fileData: string }): Promise<vo
     fileData: cv.fileData,
     uploadedAt: new Date().toISOString()
   };
-  if (isFallbackMode) {
-    localStorage.setItem("portfolio_cv", JSON.stringify(cvDoc));
-    return;
-  }
+  // Always update LocalStorage cache first
+  localStorage.setItem("portfolio_cv", JSON.stringify(cvDoc));
+
+  if (isFallbackMode) return;
+
   try {
-    await withTimeout(setDoc(doc(db, "config", "cv"), cvDoc), 2000);
+    await withTimeout(setDoc(doc(db, "config", "cv"), cvDoc), 15000);
   } catch (err) {
     console.error("Firestore CV write error:", err);
     throw err;
@@ -489,7 +535,7 @@ export async function getEducationExperience(): Promise<EducationExperience[]> {
     return local.sort((a, b) => a.sortOrder - b.sortOrder);
   }
   try {
-    const querySnapshot = await withTimeout(getDocs(collection(db, "education")), 2000);
+    const querySnapshot = await withTimeout(getDocs(collection(db, "education")), 8000);
     const education: EducationExperience[] = [];
     querySnapshot.forEach((doc) => {
       education.push({ ...doc.data() } as EducationExperience);
@@ -498,9 +544,12 @@ export async function getEducationExperience(): Promise<EducationExperience[]> {
       for (const edu of DEFAULT_EDUCATION) {
         await saveEducationExperience(edu);
       }
+      saveLocalData("portfolio_education", DEFAULT_EDUCATION);
       return [...DEFAULT_EDUCATION].sort((a, b) => a.sortOrder - b.sortOrder);
     }
-    return education.sort((a, b) => a.sortOrder - b.sortOrder);
+    const sortedEdu = education.sort((a, b) => a.sortOrder - b.sortOrder);
+    saveLocalData("portfolio_education", sortedEdu); // Sync to local storage
+    return sortedEdu;
   } catch (err) {
     console.error("Firestore education read error, falling back to LocalStorage:", err);
     const local = getLocalData("portfolio_education", DEFAULT_EDUCATION);
@@ -509,16 +558,17 @@ export async function getEducationExperience(): Promise<EducationExperience[]> {
 }
 
 export async function saveEducationExperience(entry: EducationExperience): Promise<void> {
-  if (isFallbackMode) {
-    const list = getLocalData("portfolio_education", DEFAULT_EDUCATION);
-    const index = list.findIndex(e => e.id === entry.id);
-    if (index > -1) list[index] = entry;
-    else list.push(entry);
-    saveLocalData("portfolio_education", list);
-    return;
-  }
+  // Always update LocalStorage cache first
+  const list = getLocalData("portfolio_education", DEFAULT_EDUCATION);
+  const index = list.findIndex(e => e.id === entry.id);
+  if (index > -1) list[index] = entry;
+  else list.push(entry);
+  saveLocalData("portfolio_education", list);
+
+  if (isFallbackMode) return;
+
   try {
-    await withTimeout(setDoc(doc(db, "education", entry.id), entry), 2000);
+    await withTimeout(setDoc(doc(db, "education", entry.id), entry), 15000);
   } catch (err) {
     console.error("Firestore education write error:", err);
     throw err;
@@ -526,12 +576,13 @@ export async function saveEducationExperience(entry: EducationExperience): Promi
 }
 
 export async function deleteEducationExperience(id: string): Promise<void> {
-  if (isFallbackMode) {
-    const list = getLocalData("portfolio_education", DEFAULT_EDUCATION);
-    const filtered = list.filter(e => e.id !== id);
-    saveLocalData("portfolio_education", filtered);
-    return;
-  }
+  // Always update LocalStorage cache first
+  const list = getLocalData("portfolio_education", DEFAULT_EDUCATION);
+  const filtered = list.filter(e => e.id !== id);
+  saveLocalData("portfolio_education", filtered);
+
+  if (isFallbackMode) return;
+
   try {
     await deleteDoc(doc(db, "education", id));
   } catch (err) {

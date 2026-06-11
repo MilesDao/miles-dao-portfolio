@@ -16,7 +16,7 @@ interface BlogEditorProps {
 // ============================================================
 // MARKDOWN TO BLOCKS PARSER
 // ============================================================
-function parseMarkdownToBlocks(markdown: string): EditorBlock[] {
+export function parseMarkdownToBlocks(markdown: string): EditorBlock[] {
   if (!markdown) {
     return [{ id: "b-1", type: "paragraph", content: "" }];
   }
@@ -334,6 +334,104 @@ export default function BlogEditor({ blog, onClose, onSave }: BlogEditorProps) {
   // --- Drag & drop state ---
   const [coverDragActive, setCoverDragActive] = useState(false);
   const [docDropActive, setDocDropActive] = useState(false);
+  const [draggableBlockId, setDraggableBlockId] = useState<string | null>(null);
+
+  // --- History (Undo/Redo) ---
+  const historyRef = useRef<EditorBlock[][]>([]);
+  const redoRef = useRef<EditorBlock[][]>([]);
+  const prevBlocksRef = useRef<EditorBlock[] | null>(null);
+  const isUndoingRedoingRef = useRef<boolean>(false);
+  const focusedBlockInitialContentRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!blocks || blocks.length === 0) return;
+    
+    if (prevBlocksRef.current === null) {
+      prevBlocksRef.current = JSON.parse(JSON.stringify(blocks));
+      return;
+    }
+
+    if (isUndoingRedoingRef.current) {
+      isUndoingRedoingRef.current = false;
+      prevBlocksRef.current = JSON.parse(JSON.stringify(blocks));
+      return;
+    }
+
+    // Check if the content actually changed to avoid duplicate history states
+    const prevStr = JSON.stringify(prevBlocksRef.current);
+    const currStr = JSON.stringify(blocks);
+    if (prevStr === currStr) return;
+
+    // Push the cloned previous state to history
+    historyRef.current.push(prevBlocksRef.current);
+    if (historyRef.current.length > 50) {
+      historyRef.current.shift();
+    }
+    
+    // Clear redo stack on new action
+    redoRef.current = [];
+    
+    prevBlocksRef.current = JSON.parse(JSON.stringify(blocks));
+  }, [blocks]);
+
+  const undo = useCallback(() => {
+    if (historyRef.current.length === 0) return;
+    
+    isUndoingRedoingRef.current = true;
+    
+    // Save current blocks to redo stack
+    const currentClone = JSON.parse(JSON.stringify(blocks));
+    redoRef.current.push(currentClone);
+    
+    // Restore previous state
+    const previousState = historyRef.current.pop()!;
+    setBlocks(previousState);
+  }, [blocks]);
+
+  const redo = useCallback(() => {
+    if (redoRef.current.length === 0) return;
+    
+    isUndoingRedoingRef.current = true;
+    
+    // Save current blocks to undo stack
+    const currentClone = JSON.parse(JSON.stringify(blocks));
+    historyRef.current.push(currentClone);
+    
+    // Restore next state
+    const nextState = redoRef.current.pop()!;
+    setBlocks(nextState);
+  }, [blocks]);
+
+  // Global Undo/Redo key shortcut listener
+  useEffect(() => {
+    const handleGlobalShortcuts = (e: KeyboardEvent) => {
+      // Check for Ctrl+Z or Cmd+Z
+      const isUndo = (e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey;
+      const isRedo = ((e.ctrlKey || e.metaKey) && e.key === 'y') || ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey);
+
+      if (isUndo || isRedo) {
+        if (focusedBlockId) {
+          const currentContent = blockContentsRef.current[focusedBlockId] ?? 
+            blocksRef.current.find(b => b.id === focusedBlockId)?.content ?? "";
+          
+          if (currentContent !== focusedBlockInitialContentRef.current) {
+            // Let the browser handle native undo/redo (e.g. typing)
+            return;
+          }
+        }
+
+        e.preventDefault();
+        if (isUndo) {
+          undo();
+        } else {
+          redo();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleGlobalShortcuts);
+    return () => document.removeEventListener('keydown', handleGlobalShortcuts);
+  }, [undo, redo, focusedBlockId]);
 
   // --- Image resize state ---
   const [resizingBlockId, setResizingBlockId] = useState<string | null>(null);
@@ -353,6 +451,7 @@ export default function BlogEditor({ blog, onClose, onSave }: BlogEditorProps) {
   const coverDragCounterRef = useRef(0);
   const resizeDataRef = useRef({ startX: 0, startWidth: 100, containerCenterX: 0, halfContainerW: 0 });
   const selectionAnchorRef = useRef<string | null>(null);
+  const isSelectingBlocksRef = useRef<boolean>(false);
 
   // Keep blocksRef in sync
   useEffect(() => {
@@ -552,6 +651,9 @@ export default function BlogEditor({ blog, onClose, onSave }: BlogEditorProps) {
   // ====================================================================
   useEffect(() => {
     const handleMouseUp = () => {
+      if (isSelectingBlocksRef.current) {
+        isSelectingBlocksRef.current = false;
+      }
       const selection = window.getSelection();
       if (!selection || selection.isCollapsed || !selection.toString().trim()) {
         setFloatingBar(null);
@@ -628,6 +730,11 @@ export default function BlogEditor({ blog, onClose, onSave }: BlogEditorProps) {
   const handleBlockFocus = (blockId: string) => {
     focusedBlockRef.current = blockId;
     setFocusedBlockId(blockId);
+    
+    // Store the initial content when focused to compare for native vs custom undo/redo
+    const block = blocksRef.current.find(b => b.id === blockId);
+    focusedBlockInitialContentRef.current = block ? block.content : null;
+
     // Clear block selection when entering edit mode
     if (selectedBlockIds.size > 0) {
       setSelectedBlockIds(new Set());
@@ -636,6 +743,9 @@ export default function BlogEditor({ blog, onClose, onSave }: BlogEditorProps) {
 
   const handleBlockBlur = (blockId: string) => {
     focusedBlockRef.current = null;
+    focusedBlockInitialContentRef.current = null;
+    setFocusedBlockId(null);
+    
     // Sync pending content from ref → state
     const pendingContent = blockContentsRef.current[blockId];
     if (pendingContent !== undefined) {
@@ -881,6 +991,7 @@ export default function BlogEditor({ blog, onClose, onSave }: BlogEditorProps) {
 
   const handleBlockDragEnd = () => {
     setDraggedBlockIdx(null);
+    setDraggableBlockId(null);
   };
 
   // ====================================================================
@@ -931,25 +1042,35 @@ export default function BlogEditor({ blog, onClose, onSave }: BlogEditorProps) {
   };
 
   // ====================================================================
-  // BLOCK SELECTION (click/shift-click/ctrl-click for multi-select)
+  // BLOCK SELECTION (click/shift-click/ctrl-click/drag for multi-select)
   // ====================================================================
-  const handleBlockRowClick = (e: React.MouseEvent, blockId: string, idx: number) => {
+  const handleBlockMouseDown = (e: React.MouseEvent, blockId: string, idx: number) => {
     const target = e.target as HTMLElement;
-    // Don't select when clicking on editable content or buttons
+    // Don't select blocks when interacting with inputs, textareas, buttons, or menus
     if (target.closest('[contenteditable]') || target.closest('input') ||
-        target.closest('textarea') || target.closest('button') || target.closest('select')) {
+        target.closest('textarea') || target.closest('button') || target.closest('select') ||
+        target.closest('[data-block-menu]') || target.closest('[data-slash-menu]')) {
       return;
     }
-    e.preventDefault();
+    
+    // Only handle left click
+    if (e.button !== 0) return;
 
+    // Prevent default browser text selection highlighting while drag-selecting blocks
+    e.preventDefault();
+    
+    isSelectingBlocksRef.current = true;
+    
     if (e.shiftKey && selectionAnchorRef.current) {
-      // Range select
-      const anchorIdx = blocks.findIndex(b => b.id === selectionAnchorRef.current);
-      const start = Math.min(anchorIdx, idx);
-      const end = Math.max(anchorIdx, idx);
-      setSelectedBlockIds(new Set(blocks.slice(start, end + 1).map(b => b.id)));
+      // Shift range select
+      const anchorIdx = blocksRef.current.findIndex(b => b.id === selectionAnchorRef.current);
+      if (anchorIdx !== -1) {
+        const start = Math.min(anchorIdx, idx);
+        const end = Math.max(anchorIdx, idx);
+        setSelectedBlockIds(new Set(blocksRef.current.slice(start, end + 1).map(b => b.id)));
+      }
     } else if (e.ctrlKey || e.metaKey) {
-      // Toggle single
+      // Ctrl/Cmd toggle select
       setSelectedBlockIds(prev => {
         const next = new Set(prev);
         if (next.has(blockId)) next.delete(blockId);
@@ -958,13 +1079,28 @@ export default function BlogEditor({ blog, onClose, onSave }: BlogEditorProps) {
       });
       selectionAnchorRef.current = blockId;
     } else {
-      // Single select
-      setSelectedBlockIds(prev => {
-        if (prev.size === 1 && prev.has(blockId)) return new Set(); // Deselect
-        return new Set([blockId]);
-      });
+      // Normal single select
+      setSelectedBlockIds(new Set([blockId]));
       selectionAnchorRef.current = blockId;
     }
+
+    // Blur any active editable elements
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
+  const handleBlockMouseEnter = (e: React.MouseEvent, blockId: string, idx: number) => {
+    if (!isSelectingBlocksRef.current || !selectionAnchorRef.current) return;
+
+    // Range select between anchor and current block
+    const anchorIdx = blocksRef.current.findIndex(b => b.id === selectionAnchorRef.current);
+    if (anchorIdx === -1) return;
+
+    const start = Math.min(anchorIdx, idx);
+    const end = Math.max(anchorIdx, idx);
+    const newSelected = new Set(blocksRef.current.slice(start, end + 1).map(b => b.id));
+    setSelectedBlockIds(newSelected);
   };
 
   const deleteSelectedBlocks = () => {
@@ -1327,11 +1463,12 @@ export default function BlogEditor({ blog, onClose, onSave }: BlogEditorProps) {
               return (
                 <div
                   key={block.id}
-                  draggable={block.type !== "image"}
+                  draggable={draggableBlockId === block.id}
                   onDragStart={(e) => handleBlockDragStart(e, idx)}
                   onDragOver={(e) => handleBlockDragOver(e, idx)}
                   onDragEnd={handleBlockDragEnd}
-                  onClick={(e) => handleBlockRowClick(e, block.id, idx)}
+                  onMouseDown={(e) => handleBlockMouseDown(e, block.id, idx)}
+                  onMouseEnter={(e) => handleBlockMouseEnter(e, block.id, idx)}
                   className={`group relative flex items-start gap-2 py-0.5 px-1 rounded transition-all duration-150 ${
                     isDragged ? "opacity-30 bg-neutral-300 border border-dashed border-neutral-900"
                     : selectedBlockIds.has(block.id) ? "bg-blue-50 ring-2 ring-blue-300 ring-inset"
@@ -1355,7 +1492,15 @@ export default function BlogEditor({ blog, onClose, onSave }: BlogEditorProps) {
                     >
                       <Plus size={12} />
                     </button>
-                    <div className="p-1 cursor-grab active:cursor-grabbing hover:bg-neutral-300 text-neutral-400 hover:text-neutral-950 rounded">
+                    <div
+                      onMouseEnter={() => setDraggableBlockId(block.id)}
+                      onMouseLeave={() => {
+                        if (draggedBlockIdx === null) {
+                          setDraggableBlockId(null);
+                        }
+                      }}
+                      className="p-1 cursor-grab active:cursor-grabbing hover:bg-neutral-300 text-neutral-400 hover:text-neutral-950 rounded"
+                    >
                       <GripVertical size={12} />
                     </div>
                     <button
