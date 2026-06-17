@@ -537,7 +537,9 @@ export async function getBlogs(): Promise<Blog[]> {
     });
 
     // If version changed, refresh default blogs with latest content
+    const deletedDefaults = JSON.parse(localStorage.getItem("portfolio_deleted_default_blogs") || "[]");
     for (const def of DEFAULT_BLOGS) {
+      if (deletedDefaults.includes(def.id)) continue;
       const match = blogs.findIndex(b => b.id === def.id);
       if (match === -1) {
         blogs.push(def);
@@ -585,6 +587,16 @@ export async function deleteBlog(id: string): Promise<void> {
   const list = getLocalData("portfolio_blogs", DEFAULT_BLOGS);
   const filtered = list.filter(b => b.id !== id);
   saveLocalData("portfolio_blogs", filtered);
+
+  // Track permanently deleted default blogs so they aren't re-added
+  const defaultIds = new Set(DEFAULT_BLOGS.map(b => b.id));
+  if (defaultIds.has(id)) {
+    const deleted = JSON.parse(localStorage.getItem("portfolio_deleted_default_blogs") || "[]");
+    if (!deleted.includes(id)) {
+      deleted.push(id);
+      localStorage.setItem("portfolio_deleted_default_blogs", JSON.stringify(deleted));
+    }
+  }
 
   if (isFallbackMode) return;
 
