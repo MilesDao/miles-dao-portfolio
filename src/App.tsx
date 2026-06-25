@@ -176,7 +176,7 @@ export default function App() {
     };
   }, [selectedBlog, editingBlog, activeModal]);
 
-  // Removed entrance animations based on user request
+
 
   // Scroll reveal animations powered by GSAP ScrollTrigger
   useGSAP(() => {
@@ -350,11 +350,13 @@ export default function App() {
             {/* Top Technical subtitle header */}
             <div className="flex items-start gap-3 md:gap-4 mb-6 md:mb-8 select-none">
               {/* Outer double-line asterisk symbol rotating slowly */}
-              <div
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 15, ease: "linear" }}
                 className="w-8 h-8 rounded-full border border-neutral-600 flex items-center justify-center text-neutral-900 border-dashed"
               >
                 <Asterisk size={16} strokeWidth={1.5} />
-              </div>
+              </motion.div>
 
               {/* Two lines exactly 22 and 20 character length variables */}
               <div className="font-mono text-[10px] md:text-xs leading-normal text-neutral-600">

@@ -6,7 +6,28 @@ export default function WireframeSphere() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Rotation animation removed as requested.
+    let animationFrameId: number;
+    let lastTime = performance.now();
+
+    const animate = (time: number) => {
+      const delta = (time - lastTime) / 1000;
+      lastTime = time;
+
+      // Slowly rotate automatically
+      setRotation((prev) => ({
+        x: prev.x + 0.15 * delta + mouseRef.current.y * 0.25 * delta,
+        y: prev.y + 0.3 * delta + mouseRef.current.x * 0.25 * delta,
+      }));
+
+      // Attenuate user hover impact slowly
+      mouseRef.current.x *= 0.95;
+      mouseRef.current.y *= 0.95;
+
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent) => {

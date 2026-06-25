@@ -186,7 +186,7 @@ export default function CommandPalette({ id, isOpen, onClose, onAction }: Comman
         {/* Status Line */}
         <div className="px-4 py-2 bg-neutral-950 text-[#ebeae4] border-t border-neutral-800 flex justify-between items-center text-[10px] font-mono">
           <span className="flex items-center gap-2 text-green-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
             CONSOLE ACTIVE
           </span>
           <span className="text-neutral-500 uppercase">SYS_INDEXv26</span>
