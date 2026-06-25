@@ -104,7 +104,7 @@ export default function PortraitWithKeypoints() {
       {/* Outer brutalist frame header (above the viewport, aligned with viewport width) */}
       <div className="w-[calc(100%-56px)] flex justify-between items-center px-1 pb-1 font-mono text-[9px] text-neutral-500 tracking-wider">
         <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
           <span>[SYS.FEED_ACTIVE]</span>
         </div>
         <span>{systemTime}</span>
@@ -141,7 +141,6 @@ export default function PortraitWithKeypoints() {
             id="scanner-sweep-line"
             className="absolute left-0 w-full h-[1.5px] bg-red-500 shadow-[0_0_8px_#ef4444] pointer-events-none opacity-0 group-hover:opacity-100"
             style={{
-              animation: isHovered ? "scan-sweep 4s linear infinite" : "none",
               zIndex: 10,
             }}
           />
@@ -193,42 +192,6 @@ export default function PortraitWithKeypoints() {
               })}
             </g>
 
-            {/* Special Tracking Circles around Eyes & Nose */}
-            <g id="tracking-rings" className="transition-opacity duration-300">
-              {/* Left Eye Tracking Ring */}
-              <circle
-                cx="55"
-                cy="33.3"
-                r="2.8"
-                fill="none"
-                stroke="#ef4444"
-                strokeWidth="0.3"
-                strokeDasharray="0.8 0.8"
-                className="origin-[55px_33.3px] animate-spin-slow opacity-0 group-hover:opacity-75"
-              />
-              {/* Right Eye Tracking Ring */}
-              <circle
-                cx="73"
-                cy="39.9"
-                r="2.8"
-                fill="none"
-                stroke="#ef4444"
-                strokeWidth="0.3"
-                strokeDasharray="0.8 0.8"
-                className="origin-[73px_39.9px] animate-spin-slow opacity-0 group-hover:opacity-75"
-              />
-              {/* Nose Tracking Ring */}
-              <circle
-                cx="65"
-                cy="43.9"
-                r="4.2"
-                fill="none"
-                stroke="#ef4444"
-                strokeWidth="0.3"
-                strokeDasharray="1.5 1.5"
-                className="origin-[65px_43.9px] animate-pulse opacity-0 group-hover:opacity-70"
-              />
-            </g>
 
             {/* Mesh Nodes (Keypoints) */}
             <g id="mesh-nodes">

@@ -172,6 +172,7 @@ export default function AdminModal({ id, isOpen, onClose, educationList, onRefre
     itemsText: "",
     sortOrder: "1"
   });
+  const [editingEducation, setEditingEducation] = useState<EducationExperience | null>(null);
 
   const [blogInputMode, setBlogInputMode] = useState<"manual" | "ai">("manual");
   const [aiForm, setAiForm] = useState({
@@ -511,26 +512,49 @@ export default function AdminModal({ id, isOpen, onClose, educationList, onRefre
   };
 
   // --- EDUCATION CRUD HANDLERS ---
+  const handleEditEducationClick = (edu: EducationExperience) => {
+    setEditingEducation(edu);
+    setEducationForm({
+      category: edu.category,
+      location: edu.location,
+      period: edu.period,
+      itemsText: edu.items.join("\n"),
+      sortOrder: edu.sortOrder.toString()
+    });
+  };
+
+  const handleCancelEditEducation = () => {
+    setEditingEducation(null);
+    setEducationForm({
+      category: "",
+      location: "",
+      period: "",
+      itemsText: "",
+      sortOrder: "1"
+    });
+  };
+
   const handleEducationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!educationForm.category || !educationForm.location || !educationForm.period) return;
 
     setIsLoading(true);
     const newEdu: EducationExperience = {
-      id: `edu-${Date.now()}`,
+      id: editingEducation ? editingEducation.id : `edu-${Date.now()}`,
       category: educationForm.category.toUpperCase(),
       location: educationForm.location,
       period: educationForm.period,
       items: educationForm.itemsText.split("\n").map(item => item.trim()).filter(Boolean),
-      sortOrder: educationItems.length + 1
+      sortOrder: editingEducation ? (editingEducation.sortOrder ?? 1) : (educationItems.length + 1)
     };
 
     try {
       await saveEducationExperience(newEdu);
       setEducationForm({ category: "", location: "", period: "", itemsText: "", sortOrder: "1" });
+      setEditingEducation(null);
       await loadAllData();
       await onRefreshData();
-      alert("Education & Experience entry saved successfully!");
+      alert(editingEducation ? "Education & Experience entry updated successfully!" : "Education & Experience entry saved successfully!");
     } catch (err: any) {
       console.error("Error saving education experience:", err);
       const errMsg = err.message || "";
@@ -1131,8 +1155,17 @@ export default function AdminModal({ id, isOpen, onClose, educationList, onRefre
                   <div className="space-y-6">
                     {/* Add Education Form */}
                     <form onSubmit={handleEducationSubmit} className="space-y-3 bg-neutral-100 p-4 border border-neutral-300 rounded">
-                      <h4 className="font-mono text-xs font-black uppercase text-neutral-800 pb-1 border-b border-neutral-300">
-                        ADD EDUCATION & EXPERIENCE ENTRY
+                      <h4 className="font-mono text-xs font-black uppercase text-neutral-800 pb-1 border-b border-neutral-300 flex justify-between items-center">
+                        <span>{editingEducation ? "EDIT EDUCATION & EXPERIENCE ENTRY" : "ADD EDUCATION & EXPERIENCE ENTRY"}</span>
+                        {editingEducation && (
+                          <button
+                            type="button"
+                            onClick={handleCancelEditEducation}
+                            className="text-red-500 hover:text-red-700 font-bold font-mono text-[9px] uppercase cursor-pointer"
+                          >
+                            [Cancel Edit]
+                          </button>
+                        )}
                       </h4>
                       <div className="grid grid-cols-2 gap-3">
                         <input
@@ -1169,8 +1202,9 @@ export default function AdminModal({ id, isOpen, onClose, educationList, onRefre
                         className="w-full bg-white border border-neutral-400 rounded px-2.5 py-1.5 font-mono text-xs h-24 resize-none"
                         required
                       />
-                      <button type="submit" className="flex items-center gap-1.5 px-4 py-2 bg-neutral-950 text-[#ebeae4] rounded font-mono text-[10px] font-black uppercase tracking-wider hover:bg-neutral-800 transition-colors">
-                        <Plus size={12} /> ADD ENTRY
+                      <button type="submit" className="flex items-center gap-1.5 px-4 py-2 bg-neutral-950 text-[#ebeae4] rounded font-mono text-[10px] font-black uppercase tracking-wider hover:bg-neutral-800 transition-colors cursor-pointer">
+                        {editingEducation ? <Check size={12} /> : <Plus size={12} />}
+                        {editingEducation ? "UPDATE ENTRY" : "ADD ENTRY"}
                       </button>
                     </form>
 
@@ -1205,13 +1239,22 @@ export default function AdminModal({ id, isOpen, onClose, educationList, onRefre
                                 </ul>
                               </div>
                             </div>
-                            <button
-                              onClick={() => handleEducationDelete(edu.id)}
-                              className="p-1.5 border border-red-200 rounded hover:bg-red-50 text-red-600 transition-colors flex-shrink-0 ml-4"
-                              title="Delete entry"
-                            >
-                              <Trash2 size={12} />
-                            </button>
+                            <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                              <button
+                                onClick={() => handleEditEducationClick(edu)}
+                                className="p-1.5 border border-neutral-400 rounded hover:bg-neutral-950 hover:text-[#ebeae4] text-neutral-700 transition-colors cursor-pointer"
+                                title="Edit entry"
+                              >
+                                <Edit3 size={12} />
+                              </button>
+                              <button
+                                onClick={() => handleEducationDelete(edu.id)}
+                                className="p-1.5 border border-red-200 rounded hover:bg-red-50 text-red-600 transition-colors cursor-pointer"
+                                title="Delete entry"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>

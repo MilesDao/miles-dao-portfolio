@@ -176,48 +176,7 @@ export default function App() {
     };
   }, [selectedBlog, editingBlog, activeModal]);
 
-  // Entrance animations on page load (Subtle premium micro-animations)
-  useGSAP(() => {
-    const tl = gsap.timeline({
-      defaults: { ease: "power2.out", duration: 0.5 }
-    });
-
-    tl.fromTo("#logo-brand", 
-      { autoAlpha: 0, x: -15 },
-      { autoAlpha: 1, x: 0, duration: 0.5 },
-      0.1
-    )
-    .fromTo("#meta-navigation button", 
-      { autoAlpha: 0, y: -8 },
-      { autoAlpha: 1, y: 0, stagger: 0.04 },
-      0.15
-    )
-    .fromTo("#quick-actions button", 
-      { autoAlpha: 0, x: 8 },
-      { autoAlpha: 1, x: 0, stagger: 0.04 },
-      0.15
-    )
-    .fromTo("#giant-name-header span", 
-      { autoAlpha: 0, y: 15 },
-      { autoAlpha: 1, y: 0, stagger: 0.08, duration: 0.6, ease: "power3.out" },
-      0.2
-    )
-    .fromTo("#hero-left-metadata", 
-      { autoAlpha: 0, y: 10 },
-      { autoAlpha: 1, y: 0, duration: 0.5 },
-      0.4
-    )
-    .fromTo("#cta-explore-btn", 
-      { autoAlpha: 0, y: 10 },
-      { autoAlpha: 1, y: 0, duration: 0.5 },
-      0.45
-    )
-    .fromTo("#hero-right-visual", 
-      { autoAlpha: 0, scale: 0.96 },
-      { autoAlpha: 1, scale: 1, duration: 0.7, ease: "power3.out" },
-      0.3
-    );
-  }, { scope: containerRef });
+  // Removed entrance animations based on user request
 
   // Scroll reveal animations powered by GSAP ScrollTrigger
   useGSAP(() => {
@@ -337,11 +296,11 @@ export default function App() {
           {/* Central Menus with smooth scrolling navigation */}
           <nav id="meta-navigation" className="hidden md:flex items-center gap-8 lg:gap-12">
             <button
-              id="nav-pf26"
-              onClick={() => scrollToSection("projects-section")}
+              id="nav-about"
+              onClick={() => scrollToSection("about-section")}
               className="font-mono text-xs tracking-wider text-neutral-800 hover:text-neutral-950 font-medium relative group"
             >
-              PF—26
+              ABOUT
               <span className="absolute left-0 right-0 -bottom-1 h-[1px] bg-neutral-950 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-200" />
             </button>
             <button
@@ -358,14 +317,6 @@ export default function App() {
               className="font-mono text-xs tracking-wider text-neutral-800 hover:text-neutral-950 font-medium relative group"
             >
               BLOG
-              <span className="absolute left-0 right-0 -bottom-1 h-[1px] bg-neutral-950 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-200" />
-            </button>
-            <button
-              id="nav-about"
-              onClick={() => scrollToSection("about-section")}
-              className="font-mono text-xs tracking-wider text-neutral-800 hover:text-neutral-950 font-medium relative group"
-            >
-              ABOUT
               <span className="absolute left-0 right-0 -bottom-1 h-[1px] bg-neutral-950 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-200" />
             </button>
           </nav>
@@ -399,13 +350,11 @@ export default function App() {
             {/* Top Technical subtitle header */}
             <div className="flex items-start gap-3 md:gap-4 mb-6 md:mb-8 select-none">
               {/* Outer double-line asterisk symbol rotating slowly */}
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 15, ease: "linear" }}
+              <div
                 className="w-8 h-8 rounded-full border border-neutral-600 flex items-center justify-center text-neutral-900 border-dashed"
               >
                 <Asterisk size={16} strokeWidth={1.5} />
-              </motion.div>
+              </div>
 
               {/* Two lines exactly 22 and 20 character length variables */}
               <div className="font-mono text-[10px] md:text-xs leading-normal text-neutral-600">
@@ -470,7 +419,7 @@ export default function App() {
                       <span className="text-neutral-900 font-bold">MILES DAO</span>
                     </div>
                     <div className="flex items-center gap-1 pt-0.5 font-extrabold text-[#111111]">
-                      <span>MD-00/26</span>
+                      <span>{`HN-${String(new Date().getDate()).padStart(2, '0')}/${String(new Date().getMonth() + 1).padStart(2, '0')}`}</span>
                       <ChevronRight size={10} className="text-neutral-900" />
                     </div>
                   </div>
@@ -513,7 +462,7 @@ export default function App() {
             <div className="md:col-span-5 flex flex-col justify-between gap-10 text-left">
               <div>
                 <p className="fade-text font-mono text-xs tracking-widest text-neutral-500 uppercase mb-2 opacity-0">
-                  EX—26 // IDENTITY INDEX
+                  BG—98 // HERE'S SOME INFORMATION ABOUT ME
                 </p>
                 <h2 className="fade-text font-display text-4xl font-black tracking-tight text-neutral-900 mb-6 uppercase opacity-0">
                   MILES DAO // SPEC
@@ -626,14 +575,14 @@ export default function App() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-4">
             <div>
               <p className="fade-text font-mono text-xs tracking-widest text-neutral-500 uppercase mb-2 opacity-0">
-                EX—26 // PORTFOLIO SERIES
+                BG—98 // SOME OF MY PROJECTS
               </p>
               <h2 className="fade-text font-display text-4xl font-black tracking-tight text-neutral-900 uppercase opacity-0">
-                CORE WORK INDEX
+                WORK
               </h2>
             </div>
             <p className="fade-text text-neutral-550 font-mono text-[9px] font-semibold tracking-wider opacity-0">
-              SCROLL HORIZONTALLY TO EXPLORE // CHRONICLES
+              SCROLL HORIZONTALLY TO EXPLORE PROJECTS
             </p>
           </div>
 
@@ -722,14 +671,14 @@ export default function App() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-4">
             <div>
               <p className="fade-text font-mono text-xs tracking-widest text-neutral-500 uppercase mb-2 opacity-0">
-                EX—26 // TECHNICAL JOURNAL
+                BG—98 // THESE BLOG POSTS ARE WHERE I CAN SHARE LESSONS LEARNED AND PERSONAL STORIES
               </p>
               <h2 className="fade-text font-display text-4xl font-black tracking-tight text-neutral-900 uppercase opacity-0">
-                BLOG REGISTERS
+                BLOG
               </h2>
             </div>
             <p className="fade-text text-neutral-550 font-mono text-[9px] font-semibold tracking-wider opacity-0">
-              CLICK AN ENTRY TO READ FULL SPEC ARCHIVE // METRICS
+              CLICK AN ENTRY TO READ THE FULL POST
             </p>
           </div>
 

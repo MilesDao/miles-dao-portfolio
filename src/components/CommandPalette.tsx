@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Search, Terminal, ArrowUpRight, ShieldCheck, Mail, Cpu } from "lucide-react";
+import { Search, Terminal, ArrowUpRight, ShieldCheck, Book, Cpu } from "lucide-react";
 
 interface CommandPaletteProps {
   id: string;
@@ -61,13 +61,6 @@ export default function CommandPalette({ id, isOpen, onClose, onAction }: Comman
 
   const commands: CommandItem[] = [
     {
-      key: "work",
-      title: "VIEW PROJECTS INDEX",
-      subtitle: "Browse custom front-end assemblies & technical sandbox systems",
-      icon: <Terminal size={14} />,
-      shortcut: "↵"
-    },
-    {
       key: "about",
       title: "LOAD TECHNICAL SPEC SHEET",
       subtitle: "Review Miles Dao's identity matrix and engine capabilities",
@@ -75,11 +68,18 @@ export default function CommandPalette({ id, isOpen, onClose, onAction }: Comman
       shortcut: "TAB"
     },
     {
-      key: "contact",
-      title: "OPEN SECURE CONTACT TERMINAL",
-      subtitle: "Send a direct stream message or business query pipeline",
-      icon: <Mail size={14} />,
-      shortcut: "M"
+      key: "work",
+      title: "VIEW PROJECTS INDEX",
+      subtitle: "Browse custom front-end assemblies & technical sandbox systems",
+      icon: <Terminal size={14} />,
+      shortcut: "↵"
+    },
+    {
+      key: "blog",
+      title: "ACCESS TECHNICAL JOURNAL",
+      subtitle: "Read architectural records and computational logs",
+      icon: <Book size={14} />,
+      shortcut: "B"
     }
   ];
 
@@ -186,7 +186,7 @@ export default function CommandPalette({ id, isOpen, onClose, onAction }: Comman
         {/* Status Line */}
         <div className="px-4 py-2 bg-neutral-950 text-[#ebeae4] border-t border-neutral-800 flex justify-between items-center text-[10px] font-mono">
           <span className="flex items-center gap-2 text-green-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
             CONSOLE ACTIVE
           </span>
           <span className="text-neutral-500 uppercase">SYS_INDEXv26</span>
