@@ -68,7 +68,7 @@ body {
 }
 
 .textured-text {
-  background-image: url('../assets/text_texture.png');
+  background-image: url('/assets/text_texture.png');
   background-size: cover;
   background-clip: text;
   -webkit-background-clip: text;

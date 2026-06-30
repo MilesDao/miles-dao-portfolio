@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "motion/react";
-import portraitImg from "@/assets/portrait.png";
+const portraitImg = "/assets/portrait.png";
 
 interface Keypoint {
   id: number;

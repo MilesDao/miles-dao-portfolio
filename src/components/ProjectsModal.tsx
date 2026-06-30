@@ -79,6 +79,16 @@ export default function ProjectsModal({ id, isOpen, onClose, projects }: Project
                   {proj.title}
                 </h3>
 
+                {proj.image && (
+                  <div className="my-4 overflow-hidden rounded border border-neutral-300">
+                    <img 
+                      src={proj.image} 
+                      alt={proj.title} 
+                      className="w-full max-h-64 object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  </div>
+                )}
+
                 <p className="text-neutral-600 text-sm mt-2 leading-relaxed max-w-xl">
                   {proj.description}
                 </p>
